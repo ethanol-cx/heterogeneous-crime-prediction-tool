@@ -1,9 +1,7 @@
-Flask==0.12.3
-click==6.7
-gunicorn==19.7.1
-itsdangerous==0.24
-Jinja2==2.9.6
-MarkupSafe==1.0
-pytz==2017.2
-requests==2.13.0
-Werkzeug==0.12.1
+certifi==2018.11.29
+chardet==3.0.4
+Django==2.1.5
+idna==2.8
+pytz==2018.9
+requests==2.21.0
+urllib3==1.24.1
