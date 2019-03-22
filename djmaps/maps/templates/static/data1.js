@@ -96,6 +96,9 @@ $.getJSON("./static/dataCrime1.json", function(dC) {
 	$("#timeOfDay").append("<input class = 'change' type = 'checkbox' id='tod-Night' name='tod-Night' font='sans-serif' checked></input>");
 	$("#timeOfDay").append("<label for = 'tod-Night'>Night (12 am to 4 am)</label><br>");
 
+	$("#DBScan").append("Distance between points (miles) <input class ='change' type='number' id='DBScanInput' name='DBScanInput' font='sans-serif' min='0.1' max='1' step='0.1'></input><br>");
+	$("#DBScan").append("<input class='change' type='submit' id='submit' name='submit'/>");
+
 	map.on('load', function() {
 		map.addSource("dataCrimes", {
 			"type": "geojson",
@@ -188,19 +191,18 @@ $.getJSON("./static/dataCrime1.json", function(dC) {
 	    		if(curMonth < 10) cMonth = "0" + curMonth.toString();
 	    		curYear = i_.getFullYear();
 	    		var cYear = curYear.toString();
-	    		dateCommitted.push(cYear + "-" + cMonth + "-" + cDate);
-	    		//console.log(cYear + "-" + cMonth + "-" + cDate);
+	    		for(var j = 0; j <= 24; j++) {
+	    			var cHour = "";
+	    			if(j <= 9) cHour = "T0" + j.toString() + ":00:00Z";
+	    			else cHour = "T" + j.toString() + ":00:00Z";
+	    			dateCommitted.push(cYear + "-" + cMonth + "-" + cDate + cHour);
+	    		}
 	    	}
-	    	$("#dates input[name='day-ALL']:checkbox").prop('checked', false);
+	    	
 	    	$("#dates input[name='day-NONE']:checkbox").prop('checked', false);
-	    	$("#dates input[name='day-Mondays']:checkbox").prop('checked', false);
-	    	$("#dates input[name='day-Tuesdays']:checkbox").prop('checked', false);
-	    	$("#dates input[name='day-Wednesdays']:checkbox").prop('checked', false);
-	    	$("#dates input[name='day-Thursdays']:checkbox").prop('checked', false);
-	    	$("#dates input[name='day-Fridays']:checkbox").prop('checked', false);
-	    	$("#dates input[name='day-Saturdays']:checkbox").prop('checked', false);
-	    	$("#dates input[name='day-Sundays']:checkbox").prop('checked', false);
+	    	
 	    	map.setFilter("crimes", ["all", ["match", ["get", "Category"], crimeType, true, false], ["match", ["get", "time"], dateCommitted, true, false], ["match", ["get", "time"], timeCommitted, true, false]]);
+	    	console.log("DATE RANGE FILTER: DONE");
 		});
 
 
