@@ -1,3 +1,37 @@
+
+function rgbToHex(color) {
+	var hex = Number(color).toString(16);
+  	if (hex.length < 2) {
+	    hex = "0" + hex;
+	}
+  	return hex;
+}
+
+function fullRGBtoHex(r, g, b) {
+	var red = rgbToHex(r);
+  	var green = rgbToHex(g);
+  	var blue = rgbToHex(b);
+  	return red + green + blue;
+}
+
+function colors() {
+	var colorArr = new Array();
+	var usedColors = new Set();
+	colorArr.add("ff8080");
+	usedColors.add("ff8080")
+	while(colorArr.length < 1000) {
+		var rColor = Math.floor(Math.random() * 256);
+		var gColor = Math.floor(Math.random() * 256);
+		var bColor = Math.floor(Math.random() * 256);
+		var hex = fullRGBtoHex(rColor, gColor, bColor);
+		if(usedColors.has(hex) == false) {
+			colorArr.add(hex);
+			usedColors.add(hex);
+		}
+	}
+	return colorArr;
+}
+
 $.getJSON("./static/dataCrime1.json", function(dC) {
 	var dataCrimes = dC;
 	//var fs = require("fs");
@@ -96,8 +130,8 @@ $.getJSON("./static/dataCrime1.json", function(dC) {
 	$("#timeOfDay").append("<input class = 'change' type = 'checkbox' id='tod-Night' name='tod-Night' font='sans-serif' checked></input>");
 	$("#timeOfDay").append("<label for = 'tod-Night'>Night (12 am to 4 am)</label><br>");
 
-	$("#DBScan").append("Distance between points (miles) <input class ='change' type='number' id='DBScanInput' name='DBScanInput' font='sans-serif' min='0.1' max='1' step='0.1'></input><br>");
-	$("#DBScan").append("<input class='change' type='submit' id='submit' name='submit'/>");
+	$("#DBScan").append("Distance between points (miles) <input class ='change' type='number' id='DBScanInput' name='DBScanInput' font='sans-serif' min='0.0' max='1' step='0.05'></input><br>");
+	$("#DBScan").append("<input class='change' type='submit' id='DBSCANsubmit' name='DBSCANsubmit'/>");
 
 	map.on('load', function() {
 		map.addSource("dataCrimes", {
@@ -174,6 +208,10 @@ $.getJSON("./static/dataCrime1.json", function(dC) {
 
 
 	$(document).ready(function() {
+		$("#DBSCANsubmit").click(function() {
+
+		});
+
 		$("#submit").click(function() {
 			dateCommitted = ["none"];
     		dateFrom = document.getElementById("date-from").value;
