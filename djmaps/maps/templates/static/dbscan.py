@@ -18,7 +18,7 @@ def convertLatLonToMiles(lat1, lon1, lat2, lon2):
 
 with open('dataCrime1.json') as json_file:
 	data = json.load(json_file)
-	distBetweenPoints = [0.15, 0.25, 0.35, 0.45, 0.55, 0.65, 0.75, 0.85, 0.95]
+	distBetweenPoints = []
 
 	miles_per_radian = 3958.7613
 
@@ -31,6 +31,8 @@ with open('dataCrime1.json') as json_file:
 	
 
 	epsilon = 1
+
+
 	for i in distBetweenPoints: 
 		epsilon = i / miles_per_radian
 		clustering = DBSCAN(eps=epsilon, min_samples=2, metric='haversine').fit(np.radians(x))
@@ -43,7 +45,6 @@ with open('dataCrime1.json') as json_file:
 		print(numberClusters)
 
 #array([ 0,  0,  0,  1,  1, -1])
-	clustering 
 #DBSCAN(algorithm='auto', eps=3, leaf_size=30, metric='euclidean',
     #metric_params=None, min_samples=2, n_jobs=None, p=None)
  
