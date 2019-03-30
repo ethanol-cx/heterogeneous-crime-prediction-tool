@@ -1,4 +1,3 @@
-
 function rgbToHex(color) {
 	var hex = Number(color).toString(16);
   	if (hex.length < 2) {
@@ -17,15 +16,15 @@ function fullRGBtoHex(r, g, b) {
 function colors() {
 	var colorArr = new Array();
 	var usedColors = new Set();
-	colorArr.add("ff8080");
-	usedColors.add("ff8080")
+	colorArr.push("ff8080");
+	usedColors.add("ff8080");
 	while(colorArr.length < 1000) {
 		var rColor = Math.floor(Math.random() * 256);
 		var gColor = Math.floor(Math.random() * 256);
 		var bColor = Math.floor(Math.random() * 256);
 		var hex = fullRGBtoHex(rColor, gColor, bColor);
 		if(usedColors.has(hex) == false) {
-			colorArr.add(hex);
+			colorArr.push(hex);
 			usedColors.add(hex);
 		}
 	}
@@ -69,6 +68,7 @@ $.getJSON("./static/dataCrime1.json", function(dC) {
 
 	var dateCommitted = new Array();
 	var timeCommitted = new Array();
+	var clusters = new Array();
 
 	days.forEach(function(value) {
 		dateCommitted.push(value);
@@ -133,6 +133,9 @@ $.getJSON("./static/dataCrime1.json", function(dC) {
 	$("#DBScan").append("Distance between points (miles) <input class ='change' type='number' id='DBScanInput' name='DBScanInput' font='sans-serif' min='0.0' max='1' step='0.05'></input><br>");
 	$("#DBScan").append("<input class='change' type='submit' id='DBSCANsubmit' name='DBSCANsubmit'/>");
 
+	var colorArr = new Array();
+	colorArr = colors();
+
 	map.on('load', function() {
 		map.addSource("dataCrimes", {
 			"type": "geojson",
@@ -146,6 +149,21 @@ $.getJSON("./static/dataCrime1.json", function(dC) {
 			"layout": {
 				"icon-image": "circle-11",
 				"icon-allow-overlap": true
+			},
+			"paint": {
+				"icon-color": [
+					'match', ["get", "0.05cluster"], "-1", "#000000", 
+						"0", "#a9a9a9", "1", "#cc0000",
+						"2", "#cc6600", "3", "#cccc00",
+						"4", "#66cc00", "5", "#00cccc",
+						"6", "#0066cc", "7", "#0000cc",
+						"8", "#6600cc", "9", "#cc00cc",
+						"10", "#cc0066", "11", "#ff0000", 
+						"12", "#ff8000", "13", "#ffff00",
+						"14", "#80ff00", "15", "#00ff80",
+						"16", "#00ffff", "17", "#0080ff",
+						"#ff99ff"
+				]
 			}
 		});
 		var popup = new mapboxgl.Popup({
@@ -209,6 +227,14 @@ $.getJSON("./static/dataCrime1.json", function(dC) {
 
 	$(document).ready(function() {
 		$("#DBSCANsubmit").click(function() {
+			clusters = [];
+			var fileName = document.getElementById("DBScanInput").value + "miles.txt";
+			if(document.getElementById("DBScanInput").value == "0" || document.getElementById("DBScanInput").value == "0.0") fileName = "noDBSCANfilter.txt";
+			const fs = require('fs');
+			fs.readFile(fileName, function(text){
+    			clusters = text.split("\n") //gives me array assigning each crime to a cluster
+			});
+
 
 		});
 
