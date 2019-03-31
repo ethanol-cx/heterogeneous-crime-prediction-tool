@@ -13,21 +13,57 @@ function fullRGBtoHex(r, g, b) {
   	return red + green + blue;
 }
 
-function colors() {
+/* FOR THE COLORS FUNCTION BELOW
+'match', ["get", "0.05cluster"], "-1", "#000000", 
+		"0", "#a9a9a9", "1", "#cc0000",
+		"2", "#cc6600", "3", "#cccc00",
+		"4", "#66cc00", "5", "#00cccc",
+		"6", "#0066cc", "7", "#0000cc",
+		"8", "#6600cc", "9", "#cc00cc",
+		"10", "#cc0066", "11", "#ff0000", 
+		"12", "#ff8000", "13", "#ffff00",
+		"14", "#80ff00", "15", "#00ff80",
+		"16", "#00ffff", "17", "#0080ff",
+		"#ff99ff" <---FUNCTION BELOW (colors(DBSCANdistance)) INTENDED TO 
+					  OUTPUT ARRAY THAT MATCHES THIS ARRAY
+*/
+
+function colors(DBSCANdistance) {
 	var colorArr = new Array();
 	var usedColors = new Set();
-	colorArr.push("ff8080");
-	usedColors.add("ff8080");
-	while(colorArr.length < 1000) {
+
+	colorArr.push("match");
+
+	var specifyClusterDistance = new Array();
+	specifyClusterDistance.push("get");
+	specifyClusterDistance.push(String(DBSCANdistance));
+
+	colorArr.push(specifyClusterDistance);
+	colorArr.push("-1");
+	colorArr.push("#000000");
+	colorArr.push("0");
+	colorArr.push("#ff8080");
+
+	usedColors.add("#000000");
+	usedColors.add("#ff8080");
+	usedColors.add("#a9a9a9");
+
+	var i = 1;
+
+	while(colorArr.length < 800) {
 		var rColor = Math.floor(Math.random() * 256);
 		var gColor = Math.floor(Math.random() * 256);
 		var bColor = Math.floor(Math.random() * 256);
-		var hex = fullRGBtoHex(rColor, gColor, bColor);
+		var hex = "#" + fullRGBtoHex(rColor, gColor, bColor);
 		if(usedColors.has(hex) == false) {
+			colorArr.push(String(i));
 			colorArr.push(hex);
 			usedColors.add(hex);
+			i++;
 		}
 	}
+
+	colorArr.push("#a9a9a9");
 	return colorArr;
 }
 
@@ -52,6 +88,7 @@ $.getJSON("./static/dataCrime1.json", function(dC) {
 
 	var ct = new Set();
 	var days = new Set();
+
 	for(var i = 0; i < dataCrimes.features.length; i++) {
 		ct.add(dataCrimes.features[i].properties.Category);
 		//console.log(dataCrimes.features[i].properties.Category);
@@ -133,8 +170,13 @@ $.getJSON("./static/dataCrime1.json", function(dC) {
 	$("#DBScan").append("Distance between points (miles) <input class ='change' type='number' id='DBScanInput' name='DBScanInput' font='sans-serif' min='0.0' max='1' step='0.05'></input><br>");
 	$("#DBScan").append("<input class='change' type='submit' id='DBSCANsubmit' name='DBSCANsubmit'/>");
 
+
+
 	var colorArr = new Array();
-	colorArr = colors();
+	var DBSCANdistance = "0cluster";
+	colorArr = colors(DBSCANdistance);
+
+
 
 	map.on('load', function() {
 		map.addSource("dataCrimes", {
@@ -142,30 +184,31 @@ $.getJSON("./static/dataCrime1.json", function(dC) {
 			"data": dataCrimes
 		});
 
-		map.addLayer({
-			"id": "crimes",
-			"type": "symbol",
-			"source": "dataCrimes",
-			"layout": {
+		/*
+		"layout": {
 				"icon-image": "circle-11",
 				"icon-allow-overlap": true
 			},
+		*/
+
+
+		//MAP LAYER
+		map.addLayer({
+			"id": "crimes",
+			"type": "circle",
+			"source": "dataCrimes",
+			//line 146 "layout:"...
 			"paint": {
-				"icon-color": [
-					'match', ["get", "0.05cluster"], "-1", "#000000", 
-						"0", "#a9a9a9", "1", "#cc0000",
-						"2", "#cc6600", "3", "#cccc00",
-						"4", "#66cc00", "5", "#00cccc",
-						"6", "#0066cc", "7", "#0000cc",
-						"8", "#6600cc", "9", "#cc00cc",
-						"10", "#cc0066", "11", "#ff0000", 
-						"12", "#ff8000", "13", "#ffff00",
-						"14", "#80ff00", "15", "#00ff80",
-						"16", "#00ffff", "17", "#0080ff",
-						"#ff99ff"
-				]
+				"circle-radius": {
+					"base": 3.25,
+					"stops": [[12,3.5], [22,180]]
+				},
+				"circle-color": colorArr,
+				"circle-stroke-width": 1,
+				"circle-stroke-color": "#ffffff"
 			}
 		});
+
 		var popup = new mapboxgl.Popup({
 			closeButton: false,
 			closeOnClick: false
@@ -183,7 +226,8 @@ $.getJSON("./static/dataCrime1.json", function(dC) {
 			var crimeTime = crimeDate.slice(11,16);
 			var description = "<b>Type: " + e.features[0].properties.Category + "</b><br>Date: " 
 				+ crimeMonth + "-" + crimeDay + "-" + crimeYear + "<br>"
-				+ "Time: " + crimeTime + ":00 PST<br>";
+				+ "Time: " + crimeTime + ":00 PST<br>"
+				+ "Cluster: " + e.features[0].properties[DBSCANdistance] + "<br>"; 
 			 
 			// Ensure that if the map is zoomed out such that multiple
 			// copies of the feature are visible, the popup appears
@@ -195,8 +239,8 @@ $.getJSON("./static/dataCrime1.json", function(dC) {
 			// Populate the popup and set its coordinates
 			// based on the feature found.
 			popup.setLngLat(coordinates)
-			.setHTML(description)
-			.addTo(map);
+				 .setHTML(description)
+				 .addTo(map);
 		});
 		 
 		map.on('mouseleave', 'crimes', function() {
@@ -207,7 +251,7 @@ $.getJSON("./static/dataCrime1.json", function(dC) {
 		map.setFilter("crimes", ["all"]);
 	});
 
-	
+
 
 	var dateFrom = new Date(0,0,0);
 	var dateTo = new Date(0,0,0);
@@ -225,18 +269,28 @@ $.getJSON("./static/dataCrime1.json", function(dC) {
 	var nightEnd = 4;
 
 
+
 	$(document).ready(function() {
 		$("#DBSCANsubmit").click(function() {
 			clusters = [];
 			var fileName = document.getElementById("DBScanInput").value + "miles.txt";
-			if(document.getElementById("DBScanInput").value == "0" || document.getElementById("DBScanInput").value == "0.0") fileName = "noDBSCANfilter.txt";
-			const fs = require('fs');
+			/*const fs = require('fs');
 			fs.readFile(fileName, function(text){
     			clusters = text.split("\n") //gives me array assigning each crime to a cluster
-			});
-
+			});*/
+			var curDistance = document.getElementById("DBScanInput").value;
+			if(curDistance == 0 || curDistance == 1) DBSCANdistance = Math.trunc(curDistance).toString() + "cluster";
+			else if(curDistance == 0.1 || curDistance == 0.2 || curDistance == 0.3 || curDistance == 0.4 || curDistance == 0.5
+				|| curDistance == 0.6 || curDistance == 0.7 || curDistance == 0.8 || curDistance == 0.9) {
+				var oneDecimal = Math.round(curDistance * 10) / 10;
+				DBSCANdistance = oneDecimal + "cluster";
+			}
+			else DBSCANdistance = (Math.ceil(curDistance*20)/20).toFixed(2) + "cluster";
+			var colorArr = colors(DBSCANdistance);
+			map.setPaintProperty("crimes", "circle-color", colorArr);
 
 		});
+
 
 		$("#submit").click(function() {
 			dateCommitted = ["none"];
