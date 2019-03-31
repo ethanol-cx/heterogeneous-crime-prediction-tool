@@ -1,5 +1,5 @@
 ## crime
-#Crime prediction app for DPS <br/>
+# Crime prediction app for DPS <br/>
 
 The front-end of this application is in crime → djmaps → code → templates → static → data1.js. <br/>
 I used MapBox for the crime map visualization. MapBox API documentation can be found [here](https://docs.mapbox.com/). <br/>
