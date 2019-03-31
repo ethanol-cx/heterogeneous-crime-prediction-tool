@@ -283,7 +283,7 @@ $.getJSON("./static/dataCrime1.json", function(dC) {
 			else if(curDistance == 0.1 || curDistance == 0.2 || curDistance == 0.3 || curDistance == 0.4 || curDistance == 0.5
 				|| curDistance == 0.6 || curDistance == 0.7 || curDistance == 0.8 || curDistance == 0.9) {
 				var oneDecimal = Math.round(curDistance * 10) / 10;
-				DBSCANdistance = oneDecimal + "cluster";
+				DBSCANdistance = oneDecimal.toString() + "cluster";
 			}
 			else DBSCANdistance = (Math.ceil(curDistance*20)/20).toFixed(2) + "cluster";
 			var colorArr = colors(DBSCANdistance);
