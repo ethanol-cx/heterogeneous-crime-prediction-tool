@@ -13,6 +13,11 @@ function fullRGBtoHex(r, g, b) {
   	return red + green + blue;
 }
 
+/*function dfs(edges) {
+	let explored = new Set();
+	for()
+}*/
+
 /* FOR THE COLORS FUNCTION BELOW
 'match', ["get", "0.05cluster"], "-1", "#000000", 
 		"0", "#a9a9a9", "1", "#cc0000",
@@ -67,6 +72,11 @@ function colors(DBSCANdistance) {
 	return colorArr;
 }
 
+function updateLSTMRangeInput(val) {
+	var LSTM = document.querySelector("#LSTMRangeLabel");
+	LSTM.innerHTML = val + " x " + val;
+}
+
 $.getJSON("./static/dataCrime1.json", function(dC) {
 	var dataCrimes = dC;
 	//var fs = require("fs");
@@ -105,7 +115,9 @@ $.getJSON("./static/dataCrime1.json", function(dC) {
 
 	var dateCommitted = new Array();
 	var timeCommitted = new Array();
-	var clusters = new Array();
+	var clusters = new Array(); //DBSCAN
+	var clusterBoundaries = [[[[[]]]]];
+
 
 	days.forEach(function(value) {
 		dateCommitted.push(value);
@@ -170,6 +182,10 @@ $.getJSON("./static/dataCrime1.json", function(dC) {
 	$("#DBScan").append("Distance between points (miles) <input class ='change' type='number' id='DBScanInput' name='DBScanInput' font='sans-serif' min='0.0' max='1' step='0.05'></input><br>");
 	$("#DBScan").append("<input class='change' type='submit' id='DBSCANsubmit' name='DBSCANsubmit'/>");
 
+	$("#LSTMCluster").append("Precision of grid (1x1 to 10x10) <input class='change' type='range' onchange=\"updateLSTMRangeInput(this.value);\" id='LSTMRange' font='sans-serif min='2' max='10'></input><p id='LSTMRangeLabel' style='font-size:14px;'></p><br>");
+	$("#LSTMCluster").append("Threshold <input class='change' type='number' id='LSTMThreshold' name='LSTMThreshold' font='sans-serif' value='10000' min='0' max='100000' step='10000'></input><br><br>");
+	$("#LSTMCluster").append("<input class='change' type='submit' id='LSTMsubmit' name='LSTMsubmit'/><br><br>");
+
 
 
 	var colorArr = new Array();
@@ -184,6 +200,21 @@ $.getJSON("./static/dataCrime1.json", function(dC) {
 			"data": dataCrimes
 		});
 
+		/*map.addSource("clusters", {
+			"type": "geojson",
+			"data": {
+				"type": "Feature",
+				"geometry": {
+					"type": "Polygon",
+					"coordinates": [
+						[
+							[34.0312, -118.27797375], [34.0258, -118.27797375], [34.0366, -118.2859475], [34.0312, -118.2859475], [34.0312, -118.29392125], [34.0258, -118.29392125], [34.0366, -118.29392125], [34.0366, -118.2859475], [34.0258, -118.29392125], [34.0258, -118.2859475], [34.0312, -118.2859475], [34.0312, -118.27797375], [34.0366, -118.29392125], [34.0312, -118.29392125], [34.0258, -118.2859475], [34.0204, -118.2859475], [34.0258, -118.27797375], [34.0204, -118.27797375], [34.0204, -118.2859475], [34.0204, -118.27797375]
+						]
+					]
+				}
+			}
+		});*/
+
 		/*
 		"layout": {
 				"icon-image": "circle-11",
@@ -191,8 +222,30 @@ $.getJSON("./static/dataCrime1.json", function(dC) {
 			},
 		*/
 
+		map.addLayer({
+			"id": "cluster",
+			"type": "fill",
+			"source": {
+				"type": "geojson",
+				"data": {
+					"type": "Feature",
+					"geometry": {
+						"type": "Polygon",
+						"coordinates": [
+							[[-118.27797375, 34.0312], [-118.27797375, 34.0258], [-118.2859475, 34.0366], [-118.2859475, 34.0312], [-118.29392125, 34.0312], [-118.29392125, 34.0258], [-118.29392125, 34.0366], [-118.2859475, 34.0366], [-118.29392125, 34.0258], [-118.2859475, 34.0258], [-118.2859475, 34.0312], [-118.27797375, 34.0312], [-118.29392125, 34.0366], [-118.29392125, 34.0312], [-118.2859475, 34.0258], [-118.2859475, 34.0204], [-118.27797375, 34.0258], [-118.27797375, 34.0204], [-118.2859475, 34.0204], [-118.27797375, 34.0204]]
+						]
+					}
+				}
+			},
+			"layout": {},
+			"paint": {
+				"fill-color": "#0000ff",
+				"fill-opacity": 0.4
+			}
+		});
 
-		//MAP LAYER
+
+		//MAP LAYER: ALL CRIMES
 		map.addLayer({
 			"id": "crimes",
 			"type": "circle",
@@ -208,6 +261,9 @@ $.getJSON("./static/dataCrime1.json", function(dC) {
 				"circle-stroke-color": "#ffffff"
 			}
 		});
+
+		
+
 
 		var popup = new mapboxgl.Popup({
 			closeButton: false,
@@ -290,6 +346,23 @@ $.getJSON("./static/dataCrime1.json", function(dC) {
 			map.setPaintProperty("crimes", "circle-color", colorArr);
 
 		});
+
+
+		$("#LSTMsubmit").click(function() {
+			var gridShape = document.getElementById("LSTMRange").value;
+			var threshold = document.getElementById("LSTMThreshold").value;
+			const Http = new XMLHttpRequest();
+			const url='http://localhost:8000/crimePred/cluster/dps/' + gridShape + ',' + gridShape + '/' + threshold;
+			console.log(url);
+			$.get(url, function(data,status){
+				console.log("GETTING CLUSTERS");
+				clusterBoundaries = eval(`${data}`);
+				console.log(clusterBoundaries);
+			});
+			//clusterBoundaries --> dfs lon lat
+			//add new dfs'ed lon lat layer set to map
+
+		})
 
 
 		$("#submit").click(function() {
