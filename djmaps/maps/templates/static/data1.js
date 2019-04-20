@@ -13,11 +13,6 @@ function fullRGBtoHex(r, g, b) {
   	return red + green + blue;
 }
 
-/*function dfs(edges) {
-	let explored = new Set();
-	for()
-}*/
-
 /* FOR THE COLORS FUNCTION BELOW
 'match', ["get", "0.05cluster"], "-1", "#000000", 
 		"0", "#a9a9a9", "1", "#cc0000",
@@ -72,7 +67,50 @@ function colors(DBSCANdistance) {
 	return colorArr;
 }
 
-function updateLSTMRangeInput(val) {
+
+//DFS FOR LSTM
+function isVisited(point, visited) {
+	for(var i = 0; i < visited.length; i++) {
+		if(point[0] == visited[i][0] && point[1] == visited[i][1]) return true;
+	}
+	return false;
+}
+
+function dfsInit(edges, point) { //point: lon lat pair making up the first vertex FOR ONE CLUSTER
+	var clusterInOrder = new Array();
+	var visited = new Array();
+	this.dfs(clusterInOrder, edges, point, visited);
+	return clusterInOrder;
+}
+
+function dfs(clusterInOrder, edges, point, visited) { //reCuRSioN iS ReDunDaNt
+	visited.push(point);
+	console.log("visited: " + visited);
+	clusterInOrder.push(point);
+	var neighbors = getNeighbors(edges, point);
+	for(var i = 0; i < neighbors.length; i++) {
+		if(!isVisited(neighbors[i], visited)) {
+			dfs(clusterInOrder, edges, neighbors[i], visited);
+		}
+	}
+}
+
+function getNeighbors(edges, point) { //getting neighbors of a point in DFS
+	var neighbors = new Array();
+	for(var i = 0; i < edges.length; i++) {
+		if(edges[i][0] == point[0] && edges[i][1] == point[1]) {
+			neighbors.push(([edges[i][2], edges[i][3]]));
+		} 
+		if(edges[i][2] == point[0] && edges[i][3] == point[1]) {
+			neighbors.push(([edges[i][0], edges[i][1]]));
+		}
+	}
+	return neighbors;
+}
+//END OF DFS
+
+
+function updateLSTMRangeInput(val) { //for LSTM gridshape range HTML input 
 	var LSTM = document.querySelector("#LSTMRangeLabel");
 	LSTM.innerHTML = val + " x " + val;
 }
@@ -200,6 +238,7 @@ $.getJSON("./static/dataCrime1.json", function(dC) {
 			"data": dataCrimes
 		});
 
+		//KEEP THIS COMMENT HERE JUST IN CASE THE "ADDLAYER" METHOD OF DOING THIS BREAKS FOR SOME REASON LOL
 		/*map.addSource("clusters", {
 			"type": "geojson",
 			"data": {
@@ -215,14 +254,8 @@ $.getJSON("./static/dataCrime1.json", function(dC) {
 			}
 		});*/
 
-		/*
-		"layout": {
-				"icon-image": "circle-11",
-				"icon-allow-overlap": true
-			},
-		*/
-
-		map.addLayer({
+		//TEST LSTM CLUSTER
+		/*map.addLayer({
 			"id": "cluster",
 			"type": "fill",
 			"source": {
@@ -242,7 +275,8 @@ $.getJSON("./static/dataCrime1.json", function(dC) {
 				"fill-color": "#0000ff",
 				"fill-opacity": 0.4
 			}
-		});
+		});*/ 
+		//TEST LSTM CLUSTER
 
 
 		//MAP LAYER: ALL CRIMES
@@ -358,6 +392,40 @@ $.getJSON("./static/dataCrime1.json", function(dC) {
 				console.log("GETTING CLUSTERS");
 				clusterBoundaries = eval(`${data}`);
 				console.log(clusterBoundaries);
+
+				for(var i = 0; i < clusterBoundaries[0].length; i++) {
+					var currCluster = new Array();
+					var clusterID = "cluster" + i;
+					for(var j = 0; j < clusterBoundaries[0][i].length; j++) {
+						currCluster.push([clusterBoundaries[0][i][j][0], clusterBoundaries[0][i][j][1], clusterBoundaries[0][i][j][2], clusterBoundaries[0][i][j][3]]);
+					}
+					var firstPoint = [currCluster[0][0], currCluster[0][1]];
+					console.log(firstPoint);
+					var orderedCluster = new Array();
+					orderedCluster = dfsInit(currCluster, firstPoint); //RUN DFS
+					console.log(colorArr);
+					map.addLayer({
+						"id": clusterID,
+						"type": "fill",
+						"source": {
+							"type": "geojson",
+							"data": {
+								"type": "Feature",
+								"geometry": {
+									"type": "Polygon",
+									"coordinates": [
+										orderedCluster
+									]
+								}
+							}
+						},
+						"layout": {},
+						"paint": {
+							"fill-color": colorArr[2*i+3],
+							"fill-opacity": 0.4
+						}
+					});
+				}
 			});
 			//clusterBoundaries --> dfs lon lat
 			//add new dfs'ed lon lat layer set to map
