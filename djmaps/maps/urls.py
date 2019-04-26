@@ -4,4 +4,5 @@ from . import views
 
 urlpatterns = [
 	url(r'', views.default_map, name="default"),
+	url('dbscan', views.dbscan, name="dbscan")
 ]

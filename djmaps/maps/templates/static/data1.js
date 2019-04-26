@@ -80,6 +80,7 @@ function dfsInit(edges, point) { //point: lon lat pair making up the first verte
 	var clusterInOrder = new Array();
 	var visited = new Array();
 	this.dfs(clusterInOrder, edges, point, visited);
+	clusterInOrder.push(point);
 	return clusterInOrder;
 }
 
@@ -99,10 +100,10 @@ function getNeighbors(edges, point) { //getting neighbors of a point in DFS
 	var neighbors = new Array();
 	for(var i = 0; i < edges.length; i++) {
 		if(edges[i][0] == point[0] && edges[i][1] == point[1]) {
-			neighbors.push(([edges[i][2], edges[i][3]]));
+			neighbors.push([edges[i][2], edges[i][3]]);
 		} 
 		if(edges[i][2] == point[0] && edges[i][3] == point[1]) {
-			neighbors.push(([edges[i][0], edges[i][1]]));
+			neighbors.push([edges[i][0], edges[i][1]]);
 		}
 	}
 	return neighbors;
@@ -115,8 +116,11 @@ function updateLSTMRangeInput(val) { //for LSTM gridshape range HTML input
 	LSTM.innerHTML = val + " x " + val;
 }
 
+
+
 $.getJSON("./static/dataCrime1.json", function(dC) {
 	var dataCrimes = dC;
+	var filterPoints = dataCrimes;
 	//var fs = require("fs");
 	//var datesFromOrdinal = fs.readFileSync("./static/ordinalToDate.txt").toString().split("\n");
 	/*for(var i = 0; i < datesFromOrdinal.length; i++) {
@@ -230,6 +234,71 @@ $.getJSON("./static/dataCrime1.json", function(dC) {
 	var DBSCANdistance = "0cluster";
 	colorArr = colors(DBSCANdistance);
 
+	function updateFilteredPoints(crimeType, dateCommitted, timeCommitted) {
+		filterPoints = new Array();
+		for(var i = 0; i < dataCrimes.features.length; i++) {
+			var category = dataCrimes.features[i].properties.Category;
+			var date = dataCrimes.features[i].properties.time;
+			var time = dataCrimes.features[i].properties.time;
+			if(filterExists(crimeType, category, 0) && filterExists(dateCommitted, date, 1) && filterExists(timeCommitted, time, 1)) {
+				filterPoints.push(dataCrimes.features[i]); 
+			}
+		}
+		return filterPoints;
+	}
+
+	function filterExists(filterArray, curParam, isTime) {
+		if(isTime == 0) {
+			for(var i = 0; i < filterArray.length; i++) {
+				if(curParam == filterArray[i]) return true;
+			}
+			return false;
+		}
+		else {
+			for(var i = 0; i < filterArray.length; i++) {
+				if(curParam.includes(filterArray[i])) return true;
+			}
+			return false;
+		}
+		return false;
+	}
+	
+
+	function findDBScanCluster(DBSCANdistance) {
+		var DBScanClusterTimeSeries = new Array();
+		//find the week that the crime occurred
+		//find the cluster of the crime
+		//append the crime's cluster of the crime's 
+		for(var i = 0; i < dataCrimes.features.length; i++) {
+			var dayOfCrime = new Date(crimeDate[i]);
+			var dayDiff = dayOfCrime.getDate() - dayOfCrime.getDay();
+			var weekOfCrime = new Date(dayOfCrime.setDate(dayDiff));
+			var cluster = dataCrimes.features[i].properties[DBSCANdistance];
+			DBScanClusterTimeSeries[cluster].weekOfCrime++;
+		}
+		return DBScanClusterTimeSeries;
+	}
+
+	function getCookie(name) {
+	    var cookieValue = null;
+	    if (document.cookie && document.cookie !== '') {
+	        var cookies = document.cookie.split(';');
+	        for (var i = 0; i < cookies.length; i++) {
+	            var cookie = cookies[i].trim();
+	            // Does this cookie string begin with the name we want?
+	            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+	                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+	                break;
+	            }
+	        }
+	    }
+	    return cookieValue;
+	}
+
+	function csrfSafeMethod(method) {
+	    // these HTTP methods do not require CSRF protection
+	    return (/^(GET|HEAD|OPTIONS|TRACE)$/.test(method));
+	}
 
 
 	map.on('load', function() {
@@ -317,7 +386,7 @@ $.getJSON("./static/dataCrime1.json", function(dC) {
 			var description = "<b>Type: " + e.features[0].properties.Category + "</b><br>Date: " 
 				+ crimeMonth + "-" + crimeDay + "-" + crimeYear + "<br>"
 				+ "Time: " + crimeTime + ":00 PST<br>"
-				+ "Cluster: " + e.features[0].properties[DBSCANdistance] + "<br>"; 
+				+ "DBScan Cluster: " + e.features[0].properties[DBSCANdistance] + "<br>"; 
 			 
 			// Ensure that if the map is zoomed out such that multiple
 			// copies of the feature are visible, the popup appears
@@ -362,6 +431,34 @@ $.getJSON("./static/dataCrime1.json", function(dC) {
 
 	$(document).ready(function() {
 		$("#DBSCANsubmit").click(function() {
+			console.log(filterPoints.length);
+			/*for(var i = 0; i < filterPoints.length; i++) {
+
+				console.log(filterPoints[i]);
+			}*/
+			var allFilters = {
+				crimeType,
+				dateCommitted,
+				timeCommitted
+			};
+
+			//var csrftoken = getCookie('csrftoken');
+			//
+
+			$.ajax({
+				type: "POST",
+				url: "http://localhost:8001/dbscan",
+				data: JSON.stringify(allFilters)
+			});
+
+			/*$.ajaxSetup({
+			    beforeSend: function(xhr, settings) {
+			        if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
+			            xhr.setRequestHeader("X-CSRFToken", csrftoken);
+			        }
+			    }
+			});*/
+
 			clusters = [];
 			var fileName = document.getElementById("DBScanInput").value + "miles.txt";
 			/*const fs = require('fs');
@@ -383,6 +480,16 @@ $.getJSON("./static/dataCrime1.json", function(dC) {
 
 
 		$("#LSTMsubmit").click(function() {
+			//REMOVE ANY CURRENT LSTM CLUSTER LAYERS
+			for(var i = 0; i < 10000; i++) {
+				var currClusterID = 'cluster' + i;
+				var mapLayer = map.getLayer(currClusterID);
+				if(typeof mapLayer !== 'undefined') {
+			      // Remove map layer & source.
+			      map.removeLayer(currClusterID).removeSource(currClusterID);
+			    }
+			}
+
 			var gridShape = document.getElementById("LSTMRange").value;
 			var threshold = document.getElementById("LSTMThreshold").value;
 			const Http = new XMLHttpRequest();
@@ -461,7 +568,8 @@ $.getJSON("./static/dataCrime1.json", function(dC) {
 	    	$("#dates input[name='day-NONE']:checkbox").prop('checked', false);
 	    	
 	    	map.setFilter("crimes", ["all", ["match", ["get", "Category"], crimeType, true, false], ["match", ["get", "time"], dateCommitted, true, false], ["match", ["get", "time"], timeCommitted, true, false]]);
-	    	console.log("DATE RANGE FILTER: DONE");
+	    	filterPoints = updateFilteredPoints(crimeType, dateCommitted, timeCommitted);
+	    	//console.log("DATE RANGE FILTER: DONE");
 		});
 
 
@@ -781,6 +889,7 @@ $.getJSON("./static/dataCrime1.json", function(dC) {
 	    		}
 	        // modify the next line to also work dates
 	        map.setFilter("crimes", ["all", ["match", ["get", "Category"], crimeType, true, false], ["match", ["get", "time"], timeCommitted, true, false], ["match", ["get", "time"], dateCommitted, true, false]]);
+	        filterPoints = updateFilteredPoints(crimeType, dateCommitted, timeCommitted);
 	    });
 	});
 });

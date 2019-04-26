@@ -1,5 +1,6 @@
 from sklearn.cluster import DBSCAN
 from sklearn import metrics
+import requests
 import pandas as pd
 import numpy as np
 import json
@@ -18,7 +19,7 @@ def convertLatLonToMiles(lat1, lon1, lat2, lon2):
 
 with open('./dataCrime1.json', 'r+') as json_file:
 	data = json.load(json_file)
-	distBetweenPoints = [1]
+	distBetweenPoints = [0.01,0.02,0.03,0.04,0.05,0.06,0.07,0.08,0.09]
 
 	miles_per_radian = 3958.7613
 
@@ -49,6 +50,8 @@ with open('./dataCrime1.json', 'r+') as json_file:
 		for j in labels:
 			curFile.write('%s\n' % j)
 		print(numberClusters)
+
+#resp = requests.get('https://localhost:8001/dbscan/')
 
 with open('./dataCrime1.json', "w") as json_data:
 	json.dump(data, json_data, indent=4, sort_keys=True, default=str)
