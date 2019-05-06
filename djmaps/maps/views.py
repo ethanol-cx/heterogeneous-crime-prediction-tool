@@ -2,22 +2,49 @@ from django.shortcuts import render
 from django.http import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from inspect import getsourcefile
+from sklearn.cluster import DBSCAN
+from sklearn import metrics
+import numpy as np
 import os
 import pandas as pd
 import sys
+import json
 
 # Create your views here.
-def default_map(request):
+def index(request):
 	#TODO: move this token to Django settings from an environment variable
 	#found in the Mapbox account settings and getting started instructions
 	#see https://www.mapbox.com/account/ under the "Access tokens" section
-	mapbox_access_token = 'pk.eyJ1Ijoia2F0aGxlZW54dWUiLCJhIjoiY2pyOXU5Z3JlMGxiNzQ5cGgxZmo5MWhzeiJ9.xyOwT8LWfjpOlEvPF2Iy7Qo'
-	return render(request, 'default.html', {'mapbox_access_token': mapbox_access_token})
+	return render(request, 'default.html')
 
-@csrf_exempt
 def dbscan(request):
+	body_unicode = request.body.decode('utf-8')
+	data = json.loads(body_unicode)
 	if request.method == 'POST':
-		print('IN POST REQUEST DBSCAN')
-		for i in request.data: 
-			print(i)
+		distBetweenPoints = [0.01,0.02,0.03,0.04,0.05,0.06,0.07,0.08,0.09]
 
+		miles_per_radian = 3958.7613
+		x = []
+		for f in data['features']:
+			latLong = (f['properties']['latitude'], f['properties']['longitude'])
+			x.append(latLong)
+			f["properties"]["0cluster"] = "-1"
+			#print('Latitude: ' + str(f['properties']['latitude']))
+			#print('Longitude: ' + str(f['properties']['longitude']))
+
+		epsilon = 1
+		dist = float(data['dist'])
+		epsilon = dist / miles_per_radian
+		clustering = DBSCAN(eps=epsilon, min_samples=2, metric='haversine').fit(np.radians(x))
+		labels = clustering.labels_
+		numberClusters = len(set(labels)) - (1 if -1 in labels else 0)
+		k = 0
+		for g in data['features']:
+			clusterLabel = str(dist) + "cluster"
+			#print("clusterLabel: " + clusterLabel)
+			g["properties"][clusterLabel] = str(labels[k])
+			k += 1
+
+		df = pd.DataFrame(data['features'])
+
+		return HttpResponse(df.to_json())

@@ -1,3 +1,5 @@
+var dataCrimes;
+
 function rgbToHex(color) {
 	var hex = Number(color).toString(16);
   	if (hex.length < 2) {
@@ -79,14 +81,12 @@ function isVisited(point, visited) {
 function dfsInit(edges, point) { //point: lon lat pair making up the first vertex FOR ONE CLUSTER
 	var clusterInOrder = new Array();
 	var visited = new Array();
-	this.dfs(clusterInOrder, edges, point, visited);
-	clusterInOrder.push(point);
+	dfs(clusterInOrder, edges, point, visited);
 	return clusterInOrder;
 }
 
 function dfs(clusterInOrder, edges, point, visited) { //reCuRSioN iS ReDunDaNt
 	visited.push(point);
-	console.log("visited: " + visited);
 	clusterInOrder.push(point);
 	var neighbors = getNeighbors(edges, point);
 	for(var i = 0; i < neighbors.length; i++) {
@@ -106,6 +106,9 @@ function getNeighbors(edges, point) { //getting neighbors of a point in DFS
 			neighbors.push([edges[i][0], edges[i][1]]);
 		}
 	}
+	if (neighbors.length > 2) {
+		console.log('WTF', point, edges);
+	}
 	return neighbors;
 }
 //END OF DFS
@@ -119,7 +122,7 @@ function updateLSTMRangeInput(val) { //for LSTM gridshape range HTML input
 
 
 $.getJSON("./static/dataCrime1.json", function(dC) {
-	var dataCrimes = dC;
+	dataCrimes = dC;
 	var filterPoints = dataCrimes;
 	//var fs = require("fs");
 	//var datesFromOrdinal = fs.readFileSync("./static/ordinalToDate.txt").toString().split("\n");
@@ -236,47 +239,51 @@ $.getJSON("./static/dataCrime1.json", function(dC) {
 
 	function updateFilteredPoints(crimeType, dateCommitted, timeCommitted) {
 		filterPoints = new Array();
+		times = []
+		for (var i = 0; i < timeCommitted.length; i++) {
+			times.push(timeCommitted[i].split('T')[1]);
+		}
+		dateCommitteds = new Set(dateCommitted);
+		crimeTypes = new Set(crimeType);
+		timeCommitteds = new Set(times);
 		for(var i = 0; i < dataCrimes.features.length; i++) {
 			var category = dataCrimes.features[i].properties.Category;
 			var date = dataCrimes.features[i].properties.time;
 			var time = dataCrimes.features[i].properties.time;
-			if(filterExists(crimeType, category, 0) && filterExists(dateCommitted, date, 1) && filterExists(timeCommitted, time, 1)) {
+			if(filterExists(crimeTypes, category, 0) && filterExists(dateCommitteds, date, 1) && filterExists(timeCommitteds, time.split('T')[1], 1)) {
 				filterPoints.push(dataCrimes.features[i]); 
 			}
 		}
+		//console.log(dataCrimes.features.length, filterPoints.length);
 		return filterPoints;
 	}
 
 	function filterExists(filterArray, curParam, isTime) {
-		if(isTime == 0) {
-			for(var i = 0; i < filterArray.length; i++) {
-				if(curParam == filterArray[i]) return true;
-			}
-			return false;
-		}
-		else {
-			for(var i = 0; i < filterArray.length; i++) {
-				if(curParam.includes(filterArray[i])) return true;
-			}
-			return false;
-		}
-		return false;
+		return filterArray.has(curParam);
 	}
 	
 
-	function findDBScanCluster(DBSCANdistance) {
-		var DBScanClusterTimeSeries = new Array();
+	function findDBScanCluster(DBSCANdistance, features) {
+		var DBScanClusterTimeSeries = {};
 		//find the week that the crime occurred
 		//find the cluster of the crime
 		//append the crime's cluster of the crime's 
-		for(var i = 0; i < dataCrimes.features.length; i++) {
-			var dayOfCrime = new Date(crimeDate[i]);
+		for(var i = 0; i < features.length; i++) {
+			d = features[i].properties.time;
+			var dayOfCrime = new Date(d);
 			var dayDiff = dayOfCrime.getDate() - dayOfCrime.getDay();
 			var weekOfCrime = new Date(dayOfCrime.setDate(dayDiff));
-			var cluster = dataCrimes.features[i].properties[DBSCANdistance];
-			DBScanClusterTimeSeries[cluster].weekOfCrime++;
+			var cluster = features[i].properties[DBSCANdistance];
+			if (!(weekOfCrime in DBScanClusterTimeSeries)) {
+				DBScanClusterTimeSeries[weekOfCrime.getTime()] = 0;
+			}
+			DBScanClusterTimeSeries[weekOfCrime.getTime()]++;
 		}
-		return DBScanClusterTimeSeries;
+		DBScanClusterTimeSeriesArray = [];
+		for (var key in DBScanClusterTimeSeries) {
+			DBScanClusterTimeSeriesArray.push(DBScanClusterTimeSeries[key]);
+		}
+		return DBScanClusterTimeSeriesArray;
 	}
 
 	function getCookie(name) {
@@ -430,8 +437,11 @@ $.getJSON("./static/dataCrime1.json", function(dC) {
 
 
 	$(document).ready(function() {
+		$("#DBPredict").click(function() {
+
+		});
 		$("#DBSCANsubmit").click(function() {
-			console.log(filterPoints.length);
+			//console.log(filterPoints.length);
 			/*for(var i = 0; i < filterPoints.length; i++) {
 
 				console.log(filterPoints[i]);
@@ -444,11 +454,42 @@ $.getJSON("./static/dataCrime1.json", function(dC) {
 
 			//var csrftoken = getCookie('csrftoken');
 			//
-
+			//console.log(allFilters)
+			x = updateFilteredPoints(crimeType, dateCommitted, timeCommitted)
 			$.ajax({
 				type: "POST",
-				url: "http://localhost:8001/dbscan",
-				data: JSON.stringify(allFilters)
+				url: "http://localhost:8000/dbscan",
+				data: JSON.stringify({'features': x, 'dist': document.getElementById("DBScanInput").value}),
+				success: function(data) {
+					data = JSON.parse(data);
+					data2 = [];
+					for (var key = 0; key < x.length; key++) {
+						data2[key] = {};
+						data2[key]['geometry'] = data['geometry'][key];
+						data2[key]['type'] = data['type'][key];
+						data2[key]['properties'] = data['properties'][key];
+						//console.log(dataCrimes);
+					}
+					dataCrimes['features'] = data2;
+					map.getSource('dataCrimes').setData(dataCrimes);
+					timeseries = findDBScanCluster(DBSCANdistance, x);
+					$.ajax({
+						type: "POST",
+						url: "http://localhost:8000/crimePred/predict",
+						data: JSON.stringify({
+							'features': x,
+							'periodsAhead_list': [1],
+							'data_category': 'THEFT-PETTY',
+							'timeseries': timeseries,
+							'method': 'LSTM'
+						}),
+						success: function(data3) {
+							console.log(data3);
+						}
+					});
+					//console.log(data2);
+					//console.log(dataCrimes);
+				}
 			});
 
 			/*$.ajaxSetup({
@@ -465,14 +506,17 @@ $.getJSON("./static/dataCrime1.json", function(dC) {
 			fs.readFile(fileName, function(text){
     			clusters = text.split("\n") //gives me array assigning each crime to a cluster
 			});*/
-			var curDistance = document.getElementById("DBScanInput").value;
+			var curDistance = parseFloat(document.getElementById("DBScanInput").value);
+			//console.log(curDistance);
 			if(curDistance == 0 || curDistance == 1) DBSCANdistance = Math.trunc(curDistance).toString() + "cluster";
 			else if(curDistance == 0.1 || curDistance == 0.2 || curDistance == 0.3 || curDistance == 0.4 || curDistance == 0.5
 				|| curDistance == 0.6 || curDistance == 0.7 || curDistance == 0.8 || curDistance == 0.9) {
+				console.log(curDistance);
 				var oneDecimal = Math.round(curDistance * 10) / 10;
 				DBSCANdistance = oneDecimal.toString() + "cluster";
 			}
-			else DBSCANdistance = (Math.ceil(curDistance*20)/20).toFixed(2) + "cluster";
+			else DBSCANdistance = (Math.round(curDistance*100)/100).toFixed(2) + "cluster";
+			//console.log(DBSCANdistance);
 			var colorArr = colors(DBSCANdistance);
 			map.setPaintProperty("crimes", "circle-color", colorArr);
 
@@ -494,46 +538,109 @@ $.getJSON("./static/dataCrime1.json", function(dC) {
 			var threshold = document.getElementById("LSTMThreshold").value;
 			const Http = new XMLHttpRequest();
 			const url='http://localhost:8000/crimePred/cluster/dps/' + gridShape + ',' + gridShape + '/' + threshold;
-			console.log(url);
-			$.get(url, function(data,status){
-				console.log("GETTING CLUSTERS");
-				clusterBoundaries = eval(`${data}`);
-				console.log(clusterBoundaries);
+			//console.log(url);
+			var allFilters = {
+				crimeType,
+				dateCommitted,
+				timeCommitted
+			};
 
-				for(var i = 0; i < clusterBoundaries[0].length; i++) {
-					var currCluster = new Array();
-					var clusterID = "cluster" + i;
-					for(var j = 0; j < clusterBoundaries[0][i].length; j++) {
-						currCluster.push([clusterBoundaries[0][i][j][0], clusterBoundaries[0][i][j][1], clusterBoundaries[0][i][j][2], clusterBoundaries[0][i][j][3]]);
-					}
-					var firstPoint = [currCluster[0][0], currCluster[0][1]];
-					console.log(firstPoint);
-					var orderedCluster = new Array();
-					orderedCluster = dfsInit(currCluster, firstPoint); //RUN DFS
-					console.log(colorArr);
-					map.addLayer({
-						"id": clusterID,
-						"type": "fill",
-						"source": {
-							"type": "geojson",
-							"data": {
-								"type": "Feature",
-								"geometry": {
-									"type": "Polygon",
-									"coordinates": [
-										orderedCluster
-									]
-								}
+			//var csrftoken = getCookie('csrftoken');
+			//
+			//console.log(allFilters)
+			x = updateFilteredPoints(crimeType, dateCommitted, timeCommitted)
+			method = "POST"
+			if (method == "GET") {
+				$.ajax({
+					type: "GET",
+					url: url,
+					success: function(data) {
+						console.log("GETTING CLUSTERS");
+						clusterBoundaries = eval(`${data}`);
+						console.log(clusterBoundaries);
+
+						for(var i = 0; i < clusterBoundaries[0].length; i++) {
+							var currCluster = new Array();
+							var clusterID = "cluster" + i;
+							for(var j = 0; j < clusterBoundaries[0][i].length; j++) {
+								currCluster.push([clusterBoundaries[0][i][j][0], clusterBoundaries[0][i][j][1], clusterBoundaries[0][i][j][2], clusterBoundaries[0][i][j][3]]);
 							}
-						},
-						"layout": {},
-						"paint": {
-							"fill-color": colorArr[2*i+3],
-							"fill-opacity": 0.4
+							var firstPoint = [currCluster[0][0], currCluster[0][1]];
+							//console.log(firstPoint);
+							var orderedCluster = new Array();
+							orderedCluster = dfsInit(currCluster, firstPoint); //RUN DFS
+							//console.log(colorArr);
+							map.addLayer({
+								"id": clusterID,
+								"type": "fill",
+								"source": {
+									"type": "geojson",
+									"data": {
+										"type": "Feature",
+										"geometry": {
+											"type": "Polygon",
+											"coordinates": [
+												orderedCluster
+											]
+										}
+									}
+								},
+								"layout": {},
+								"paint": {
+									"fill-color": colorArr[2*i+3],
+									"fill-opacity": 0.4
+								}
+							});
 						}
-					});
-				}
-			});
+					}
+				});
+			}
+			else {
+				$.ajax({
+					type: "POST",
+					url: "http://localhost:8000/crimePred/cluster2",
+					data: JSON.stringify({'features': x, 'gridShape': "(" + gridShape + "," +  gridShape + ")", 'threshold': threshold}),
+					success: function(data) {
+						console.log("GETTING CLUSTERS");
+						clusterBoundaries = eval(`${data}`);
+						console.log(clusterBoundaries);
+
+						for(var i = 0; i < clusterBoundaries[0].length; i++) {
+							var currCluster = new Array();
+							var clusterID = "cluster" + i;
+							for(var j = 0; j < clusterBoundaries[0][i].length; j++) {
+								currCluster.push([clusterBoundaries[0][i][j][0], clusterBoundaries[0][i][j][1], clusterBoundaries[0][i][j][2], clusterBoundaries[0][i][j][3]]);
+							}
+							var firstPoint = [currCluster[0][0], currCluster[0][1]];
+							console.log(firstPoint);
+							var orderedCluster = new Array();
+							orderedCluster = dfsInit(currCluster, firstPoint); //RUN DFS
+							console.log(colorArr);
+							map.addLayer({
+								"id": clusterID,
+								"type": "fill",
+								"source": {
+									"type": "geojson",
+									"data": {
+										"type": "Feature",
+										"geometry": {
+											"type": "Polygon",
+											"coordinates": [
+												orderedCluster
+											]
+										}
+									}
+								},
+								"layout": {},
+								"paint": {
+									"fill-color": colorArr[2*i+3],
+									"fill-opacity": 0.4
+								}
+							});
+						}
+					}
+				});
+			}
 			//clusterBoundaries --> dfs lon lat
 			//add new dfs'ed lon lat layer set to map
 
@@ -698,7 +805,6 @@ $.getJSON("./static/dataCrime1.json", function(dC) {
 		        			$("#timeOfDay input[name='tod-Night']:checkbox").prop('checked', true);
 		        			for(var i = 0; i < dateCommitted.length; i++) {
 		        				var curTime = new Date(dateCommitted[i]);
-		        				console.log(curTime.getHours());
 		        			}
 		        		}
 		        		if($(this).prop("name").slice(4) == "NONE") {

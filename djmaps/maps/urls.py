@@ -3,6 +3,6 @@ from django.conf.urls import url
 from . import views
 
 urlpatterns = [
-	url(r'', views.default_map, name="default"),
+	url('index', views.index, name="index"),
 	url('dbscan', views.dbscan, name="dbscan")
 ]
