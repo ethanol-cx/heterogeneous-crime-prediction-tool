@@ -1,4 +1,5 @@
 var dataCrimes;
+var dbPredict = [];
 
 function rgbToHex(color) {
 	var hex = Number(color).toString(16);
@@ -372,41 +373,44 @@ $.getJSON("./static/dataCrime1.json", function(dC) {
 			}
 		});
 
-		
-
-
 		var popup = new mapboxgl.Popup({
 			closeButton: false,
 			closeOnClick: false
 		});
-
+		
 		map.on('mouseenter', 'crimes', function(e) {
 		// Change the cursor style as a UI indicator.
-			map.getCanvas().style.cursor = 'pointer';
-			 
-			var coordinates = e.features[0].geometry.coordinates.slice();
-			var crimeDate = e.features[0].properties.time;
-			var crimeMonth = crimeDate.slice(5,7);
-			var crimeDay = crimeDate.slice(8,10);
-			var crimeYear = crimeDate.slice(0,4);
-			var crimeTime = crimeDate.slice(11,16);
-			var description = "<b>Type: " + e.features[0].properties.Category + "</b><br>Date: " 
-				+ crimeMonth + "-" + crimeDay + "-" + crimeYear + "<br>"
-				+ "Time: " + crimeTime + ":00 PST<br>"
-				+ "DBScan Cluster: " + e.features[0].properties[DBSCANdistance] + "<br>"; 
-			 
-			// Ensure that if the map is zoomed out such that multiple
-			// copies of the feature are visible, the popup appears
-			// over the copy being pointed to.
-			while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
-				coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
-			}
-			 
-			// Populate the popup and set its coordinates
-			// based on the feature found.
-			popup.setLngLat(coordinates)
-				 .setHTML(description)
-				 .addTo(map);
+		map.getCanvas().style.cursor = 'pointer';
+		//if(popup) popup.remove(); 
+		var coordinates = e.features[0].geometry.coordinates.slice();
+		var crimeDate = e.features[0].properties.time;
+		var crimeMonth = crimeDate.slice(5,7);
+		var crimeDay = crimeDate.slice(8,10);
+		var crimeYear = crimeDate.slice(0,4);
+		var crimeTime = crimeDate.slice(11,16);
+		var description = "<b>Type: " + e.features[0].properties.Category + "</b><br>Date: " 
+			+ crimeMonth + "-" + crimeDay + "-" + crimeYear + "<br>"
+			+ "Time: " + crimeTime + ":00 PST<br>"
+			+ "DBScan Cluster: " + e.features[0].properties[DBSCANdistance] + "<br>";
+
+		if(dbPredict.length > 0) {
+			dbPredictData = $.parseJSON(dbPredict);
+			//dbPredict = JSON.parse(dbPredict);
+			description += "DBScan Predicted # of Crimes: " + dbPredictData[0][e.features[0].properties[DBSCANdistance]] + "<br>";
+		}
+		 
+		// Ensure that if the map is zoomed out such that multiple
+		// copies of the feature are visible, the popup appears
+		// over the copy being pointed to.
+		while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
+			coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
+		}
+		 
+		// Populate the popup and set its coordinates
+		// based on the feature found.
+		popup.setLngLat(coordinates)
+			 .setHTML(description)
+			 .addTo(map);
 		});
 		 
 		map.on('mouseleave', 'crimes', function() {
@@ -438,8 +442,18 @@ $.getJSON("./static/dataCrime1.json", function(dC) {
 
 	$(document).ready(function() {
 		$("#DBPredict").click(function() {
+			console.log("dbPredict selected");
+			//if(dbPredict.length == 0) do nothing
+			x = updateFilteredPoints(crimeType, dateCommitted, timeCommitted)
+			/*if(dbPredict.length > 0)  {
+				for(var i = 0; i < x.length; i++) {
+					//dbPredict[x[i].properties[DBSCANdistance]] //# crimes predicted for this cluster
+				}
+			}*/
 
 		});
+
+
 		$("#DBSCANsubmit").click(function() {
 			//console.log(filterPoints.length);
 			/*for(var i = 0; i < filterPoints.length; i++) {
@@ -473,6 +487,7 @@ $.getJSON("./static/dataCrime1.json", function(dC) {
 					dataCrimes['features'] = data2;
 					map.getSource('dataCrimes').setData(dataCrimes);
 					timeseries = findDBScanCluster(DBSCANdistance, x);
+					//console.log("DBSCANNED");
 					$.ajax({
 						type: "POST",
 						url: "http://localhost:8000/crimePred/predict",
@@ -484,7 +499,8 @@ $.getJSON("./static/dataCrime1.json", function(dC) {
 							'method': 'LSTM'
 						}),
 						success: function(data3) {
-							console.log(data3);
+							dbPredict = data3;
+							console.log("PREDICT: " + dbPredict);
 						}
 					});
 					//console.log(data2);
@@ -538,7 +554,7 @@ $.getJSON("./static/dataCrime1.json", function(dC) {
 			var threshold = document.getElementById("LSTMThreshold").value;
 			const Http = new XMLHttpRequest();
 			const url='http://localhost:8000/crimePred/cluster/dps/' + gridShape + ',' + gridShape + '/' + threshold;
-			//console.log(url);
+			console.log("URL:  " + url);
 			var allFilters = {
 				crimeType,
 				dateCommitted,
@@ -557,7 +573,7 @@ $.getJSON("./static/dataCrime1.json", function(dC) {
 					success: function(data) {
 						console.log("GETTING CLUSTERS");
 						clusterBoundaries = eval(`${data}`);
-						console.log(clusterBoundaries);
+						console.info(clusterBoundaries);
 
 						for(var i = 0; i < clusterBoundaries[0].length; i++) {
 							var currCluster = new Array();
@@ -603,7 +619,8 @@ $.getJSON("./static/dataCrime1.json", function(dC) {
 					success: function(data) {
 						console.log("GETTING CLUSTERS");
 						clusterBoundaries = eval(`${data}`);
-						console.log(clusterBoundaries);
+						clustCopy = JSON.stringify(clusterBoundaries);
+						console.log(clustCopy);
 
 						for(var i = 0; i < clusterBoundaries[0].length; i++) {
 							var currCluster = new Array();

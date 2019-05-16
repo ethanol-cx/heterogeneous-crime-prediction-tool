@@ -9,6 +9,7 @@ import os
 import pandas as pd
 import sys
 import json
+from keras import backend as K
 
 # Create your views here.
 def index(request):
@@ -18,10 +19,15 @@ def index(request):
 	return render(request, 'default.html')
 
 def dbscan(request):
+	#Before prediction
+	K.clear_session()
 	body_unicode = request.body.decode('utf-8')
 	data = json.loads(body_unicode)
 	if request.method == 'POST':
-		distBetweenPoints = [0.01,0.02,0.03,0.04,0.05,0.06,0.07,0.08,0.09]
+
+		#distBetweenPoints = []
+		#for inc in np.arange(0.0001, 0.09, 0.0001): 
+			#distBetweenPoints.append(inc)
 
 		miles_per_radian = 3958.7613
 		x = []
@@ -32,7 +38,7 @@ def dbscan(request):
 			#print('Latitude: ' + str(f['properties']['latitude']))
 			#print('Longitude: ' + str(f['properties']['longitude']))
 
-		epsilon = 1
+		epsilon = 1.0
 		dist = float(data['dist'])
 		epsilon = dist / miles_per_radian
 		clustering = DBSCAN(eps=epsilon, min_samples=2, metric='haversine').fit(np.radians(x))
@@ -47,4 +53,5 @@ def dbscan(request):
 
 		df = pd.DataFrame(data['features'])
 
+		K.clear_session()
 		return HttpResponse(df.to_json())
