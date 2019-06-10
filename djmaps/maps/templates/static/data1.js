@@ -1,5 +1,7 @@
 var dataCrimes;
 var dbPredict = [];
+var clusterOfEachPoint = []; //lstm cluster of each point
+var timeseriesToPredict = [];
 
 function rgbToHex(color) {
 	var hex = Number(color).toString(16);
@@ -274,17 +276,194 @@ $.getJSON("./static/dataCrime1.json", function(dC) {
 			var dayOfCrime = new Date(d);
 			var dayDiff = dayOfCrime.getDate() - dayOfCrime.getDay();
 			var weekOfCrime = new Date(dayOfCrime.setDate(dayDiff));
+			weekOfCrime.setHours(0);
+			weekOfCrime.setMinutes(0);
+			weekOfCrime.setSeconds(0);
+			weekOfCrime.setMilliseconds(0);
 			var cluster = features[i].properties[DBSCANdistance];
-			if (!(weekOfCrime in DBScanClusterTimeSeries)) {
+			if (!(weekOfCrime.getTime() in DBScanClusterTimeSeries)) {
 				DBScanClusterTimeSeries[weekOfCrime.getTime()] = 0;
 			}
 			DBScanClusterTimeSeries[weekOfCrime.getTime()]++;
 		}
 		DBScanClusterTimeSeriesArray = [];
-		for (var key in DBScanClusterTimeSeries) {
-			DBScanClusterTimeSeriesArray.push(DBScanClusterTimeSeries[key]);
+		keys = Object.keys(DBScanClusterTimeSeries).sort();
+		console.log(keys);
+		last = keys.length - 1;
+		while (keys[last] == "NaN") {
+			last--;
+		}
+		date = new Date();
+		lastDate = new Date();
+		date.setTime(keys[0]);
+		lastDate.setTime(keys[last]);
+		while (date <= lastDate) {
+			if (date.getTime() in DBScanClusterTimeSeries) {
+				DBScanClusterTimeSeriesArray.push(DBScanClusterTimeSeries[date.getTime()]);
+			} else {
+				DBScanClusterTimeSeriesArray.push(0);
+			}
+			date.setDate(date.getDate() + 7);
 		}
 		return DBScanClusterTimeSeriesArray;
+	}
+
+	function LSTMtimeseries(clusterOfEachPoint, features) {
+		var lstmClusterTimeSeries = {};
+
+		for(var i = 0; i < features.length; i++) {
+			_time = features[i].properties.time;
+			var dayOfCrime = new Date(_time);
+			var dayDiff = dayOfCrime.getDate() - dayOfCrime.getDay();
+			var weekOfCrime = new Date(dayOfCrime.setDate(dayDiff));
+			weekOfCrime.setHours(0);
+			weekOfCrime.setMinutes(0);
+			weekOfCrime.setSeconds(0);
+			weekOfCrime.setMilliseconds(0);
+			var cluster = clusterOfEachPoint[i];
+			if(!(weekOfCrime.getTime() in lstmClusterTimeSeries)) {
+				lstmClusterTimeSeries[weekOfCrime.getTime()] = 0;
+			}
+			lstmClusterTimeSeries[weekOfCrime.getTime()]++;
+		}
+
+		keys = Object.keys(lstmClusterTimeSeries).sort();
+		last = keys.length - 1;
+		while (keys[last] == "NaN") {
+			last--;
+		}
+		date = new Date();
+		lastDate = new Date();
+		date.setTime(keys[0]);
+		lastDate.setTime(keys[last]);
+		lstmClusterTimeSeriesArray = [];
+		while (date <= lastDate) {
+			if (date.getTime() in DBScanClusterTimeSeries) {
+				lstmClusterTimeSeriesArray.push(lstmClusterTimeSeries[date.getTime()]);
+			} else {
+				lstmClusterTimeSeriesArray.push(0);
+			}
+			date.setDate(date.getDate() + 7);
+		}
+		console.log(lstmClusterTimeSeriesArray);
+		return lstmClusterTimeSeriesArray;
+	}
+
+	function isInCluster(clusterBoundaries, coordLon, coordLat) {
+		if(clusterBoundaries.length < 3) return false;
+		var pointExtreme = [coordLon, 100];
+		var count = 0;
+		for (var i = 0; i < clusterBoundaries.length; i++) {
+			if(segmentsIntersect(clusterBoundaries[i][0], clusterBoundaries[i][1], 
+				clusterBoundaries[i][2], clusterBoundaries[i][3],
+				coordLon, coordLat,
+				pointExtreme[0], pointExtreme[1])) {
+				count++;
+			}
+		}
+		return count % 2 == 1;
+	}
+
+	function segmentsIntersect(a,b,c,d,p,q,r,s) {
+		var det, gamma, lambda;
+		det = (c - a) * (s - q) - (r - p) * (d - b);
+	 	if (det === 0) {
+			return false;
+		} else {
+			lambda = ((s - q) * (r - a) + (p - r) * (s - b)) / det;
+			gamma = ((b - d) * (r - a) + (c - a) * (s - b)) / det;
+			return (0 < lambda && lambda < 1) && (0 < gamma && gamma < 1);
+		}
+	}
+
+	function onSegment(pLon, pLat, qLon, qLat, rLon, rLat) {
+		if(qLat <= max(pLat, rLat) && qLat >= min(pLat, rLat) &&
+			qLon <= max(pLon, rLon) && qLon >= min(pLon, rLon)) {
+			return true;
+		}
+		return false;
+	}
+
+	function intersects(firstLon, firstLat, secLon, secLat, pLon, pLat, exLon, exLat) {
+		var o1 = orientation(firstLon, firstLat, secLon, secLat, pLon, pLat);
+		var o2 = orientation(firstLon, firstLat, secLon, secLat, exLon, exLat);
+		var o3 = orientation(pLon, pLat, exLon, exLat, firstLon, firstLat);
+		var o4 = orientation(pLon, pLat, exLon, exLat, secLon, secLat);
+
+		if(o1 != o2 && o3 != o4) return true;
+
+		if(o1 == 0 && onSegment(firstLon, firstLat, pLon, pLat, secLon, secLat)) return true;
+
+		if(o2 == 0 && onSegment(firstLon, firstLat, exLon, exLat, secLon, secLat)) return true;
+
+		if(o3 == 0 && onSegment(pLon, pLat, firstLon, firstLat, exLon, exLat)) return true;
+
+		if(o4 == 0 && onSegment(pLon, pLat, secLon, secLat, exLon, exLat)) return true;
+
+		return false;
+	}
+
+	function orientation(firstLon, firstLat, secLon, secLat, thirdLon, thirdLat) {
+		var val = (secLon - firstLon) * (thirdLat - secLat) - 
+					(secLat - firstLat) * (thirdLon - secLon);
+		if(val == 0) return 0;
+		return (val > 0) ? 1 : 2;
+	}
+
+	function LSTMpointsInEachCluster(clusterBoundaries, features) {
+		//clusterBoundaries is array of clusters, clusterBoundaries[j] is cluster j of the array
+		//returns an array that gives the points in each LSTM cluster
+		var pointsInEachCluster = new Array(clusterBoundaries.length);
+		var numPointsInAnyCluster = 0;
+		for(var j = 0; j < clusterBoundaries.length; j++) {
+			var curCluster = new Array();
+			for(var i = 0; i < features.length; i++) {
+				
+				//console.log("cluster boundaries of j: " + clusterBoundaries[j]);
+				
+				//clusterLons.sort();
+				//console.log("cluster lons: " + clusterLons);
+				//console.log(features[i].geometry.coordinates[0] + " vs min lon: " + clusterLons[0] + " max lon: " + clusterLons[clusterLons.length - 1]);
+				if(isInCluster(clusterBoundaries[j], parseFloat(features[i].geometry.coordinates[0]), parseFloat(features[i].geometry.coordinates[1]))) {
+					curCluster.push(features[i]);
+					numPointsInAnyCluster++;
+				}
+				pointsInEachCluster[j] = curCluster;
+				//console.log("curCLUST ER : ! " + JSON.stringify(curCluster));
+			}
+		}
+		//console.log(JSON.stringify(pointsInEachCluster));
+		return pointsInEachCluster;
+	}
+
+	function LSTMcontains(pointsInEachCluster, curFeature) {
+		for(var i = 0; i < pointsInEachCluster.length; i++) {
+			curClustFeature = pointsInEachCluster[i];
+			//console.log(curClustFeature.geometry);
+			if(curClustFeature.geometry.coordinates[0] == curFeature.geometry.coordinates[0] && curClustFeature.geometry.coordinates[1] == curFeature.geometry.coordinates[1]
+				&& curClustFeature.properties.time == curFeature.properties.time
+				&& curClustFeature.properties.Category == curFeature.properties.Category) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	function LSTMclusterOfEachPoint(pointsInEachCluster, features) {
+		var clusterOfEachPoint = new Array(features.length).fill(-1);
+		//console.log("curCluster: " + pointsInEachCluster[0]);
+		for(var i = 0; i < features.length; i++) {
+			for(var j = 0; j < pointsInEachCluster.length; j++) {
+				var curCluster = new Array();
+				curCluster = pointsInEachCluster[j];
+
+				if(LSTMcontains(curCluster, features[i])) {
+					clusterOfEachPoint[i] = j;
+					break;
+				}
+			}
+		}
+		return clusterOfEachPoint;
 	}
 
 	function getCookie(name) {
@@ -391,12 +570,15 @@ $.getJSON("./static/dataCrime1.json", function(dC) {
 		var description = "<b>Type: " + e.features[0].properties.Category + "</b><br>Date: " 
 			+ crimeMonth + "-" + crimeDay + "-" + crimeYear + "<br>"
 			+ "Time: " + crimeTime + ":00 PST<br>"
-			+ "DBScan Cluster: " + e.features[0].properties[DBSCANdistance] + "<br>";
+			+ "DBScan Cluster: " + e.features[0].properties[DBSCANdistance] + "<br>"
+			+ "LSTM Cluster: " + e.features[0].properties['lstmCluster'] + "<br>";
 
 		if(dbPredict.length > 0) {
 			dbPredictData = $.parseJSON(dbPredict);
 			//dbPredict = JSON.parse(dbPredict);
-			description += "DBScan Predicted # of Crimes: " + dbPredictData[0][e.features[0].properties[DBSCANdistance]] + "<br>";
+			var pred = dbPredictData[0][e.features[0].properties[DBSCANdistance]];
+			if(e.features[0].properties[DBSCANdistance] == -1) pred = 0;
+			description += "Predicted # of Crimes: " + pred + "<br>";
 		}
 		 
 		// Ensure that if the map is zoomed out such that multiple
@@ -453,6 +635,24 @@ $.getJSON("./static/dataCrime1.json", function(dC) {
 
 		});
 
+		$('#predict').click(function() {
+			$.ajax({
+				type: "POST",
+				url: "http://localhost:8000/crimePred/predict",
+				data: JSON.stringify({
+					'features': x,
+					'periodsAhead_list': [10],
+					'timeseries': timeseriesToPredict,
+					'name': $('#predictionName').val(),
+					'method': 'LSTM'
+				}),
+				success: function(data3) {
+					dbPredict = data3;
+					console.log("PREDICT: " + dbPredict);
+				}
+			});
+		});
+
 
 		$("#DBSCANsubmit").click(function() {
 			//console.log(filterPoints.length);
@@ -487,22 +687,9 @@ $.getJSON("./static/dataCrime1.json", function(dC) {
 					dataCrimes['features'] = data2;
 					map.getSource('dataCrimes').setData(dataCrimes);
 					timeseries = findDBScanCluster(DBSCANdistance, x);
-					//console.log("DBSCANNED");
-					$.ajax({
-						type: "POST",
-						url: "http://localhost:8000/crimePred/predict",
-						data: JSON.stringify({
-							'features': x,
-							'periodsAhead_list': [1],
-							'data_category': 'THEFT-PETTY',
-							'timeseries': timeseries,
-							'method': 'LSTM'
-						}),
-						success: function(data3) {
-							dbPredict = data3;
-							console.log("PREDICT: " + dbPredict);
-						}
-					});
+					timeseriesToPredict = timeseries; 
+					console.log("DBSCANNED " + timeseries);
+					
 					//console.log(data2);
 					//console.log(dataCrimes);
 				}
@@ -618,9 +805,22 @@ $.getJSON("./static/dataCrime1.json", function(dC) {
 					data: JSON.stringify({'features': x, 'gridShape': "(" + gridShape + "," +  gridShape + ")", 'threshold': threshold}),
 					success: function(data) {
 						console.log("GETTING CLUSTERS");
+						console.log(x);
 						clusterBoundaries = eval(`${data}`);
-						clustCopy = JSON.stringify(clusterBoundaries);
-						console.log(clustCopy);
+						//clustCopy = JSON.stringify(clusterBoundaries);
+						//clusterBoundaries = JSON.parse("[[[" + clustCopy + "]]]");
+						//console.log(clustCopy);
+						//console.log("cluster Boundaries: " + clusterBoundaries);
+						/*for(var j = 0; j < clusterBoundaries.length; j++) {
+							console.log("cluster boundaries at j: " + clusterBoundaries[j]);
+							for(var k = 0; k < clusterBoundaries[j].length; k++) {
+								console.log("cluster boundaries at k: " + clusterBoundaries[j][k]);
+							}
+						}*/
+						
+						
+
+						var clustCopy = new Array();
 
 						for(var i = 0; i < clusterBoundaries[0].length; i++) {
 							var currCluster = new Array();
@@ -628,11 +828,12 @@ $.getJSON("./static/dataCrime1.json", function(dC) {
 							for(var j = 0; j < clusterBoundaries[0][i].length; j++) {
 								currCluster.push([clusterBoundaries[0][i][j][0], clusterBoundaries[0][i][j][1], clusterBoundaries[0][i][j][2], clusterBoundaries[0][i][j][3]]);
 							}
+							clustCopy.push(currCluster);
 							var firstPoint = [currCluster[0][0], currCluster[0][1]];
-							console.log(firstPoint);
+							//console.log(firstPoint);
 							var orderedCluster = new Array();
 							orderedCluster = dfsInit(currCluster, firstPoint); //RUN DFS
-							console.log(colorArr);
+							//console.log(colorArr);
 							map.addLayer({
 								"id": clusterID,
 								"type": "fill",
@@ -655,6 +856,48 @@ $.getJSON("./static/dataCrime1.json", function(dC) {
 								}
 							});
 						}
+
+						console.log("cluster boundaries: " + clustCopy);
+						/*for(var j = 0; j < clustCopy.length; j++) {
+							console.log("cluster boundaries at j: " + clustCopy[j]);
+							for(var k = 0; k < clustCopy[j].length; k++) {
+								console.log("cluster boundaries at k: " + clustCopy[j][k]);
+							}
+						}*/
+
+						console.log(x);
+						console.log(clustCopy);
+
+						var pointsInEachCluster = LSTMpointsInEachCluster(clustCopy, x);
+						console.log(pointsInEachCluster);
+						console.log("points in each cluster: " + pointsInEachCluster[0].length + " " + pointsInEachCluster[1].length);
+						clusterOfEachPoint = LSTMclusterOfEachPoint(pointsInEachCluster, x);
+						
+						//update points' clusters
+						var i = 0;
+						console.log(dataCrimes.features);
+						for(var y in dataCrimes.features) {
+							dataCrimes.features[y].properties['lstmCluster'] = clusterOfEachPoint[i];
+							i++;
+						}
+						map.getSource('dataCrimes').setData(dataCrimes);
+
+						timeseries = LSTMtimeseries(clusterOfEachPoint, x);
+						//console.log("cluster of each point: " + clusterOfEachPoint);
+						var numNegOnes = 0;
+						var numZeroes = 0;
+						var numOnes = 0;
+						for(var y = 0; y < clusterOfEachPoint.length; y++) {
+							if(clusterOfEachPoint[y] == -1) numNegOnes++;
+							else if(clusterOfEachPoint[y] == 0) numZeroes++;
+							else numOnes++;
+						}
+						console.log("num neg ones: " + numNegOnes);
+						console.log("num zeroes: " + numZeroes);
+						console.log("num ones: " + numOnes);
+						console.log("LSTMtimeseries: " + timeseries);
+						console.log("IN LSTM PREDICT");
+						timeseriesToPredict = timeseries;
 					}
 				});
 			}

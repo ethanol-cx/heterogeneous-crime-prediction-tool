@@ -43,14 +43,14 @@
 			<button class="dropbtn">Cluster with LSTM</button>
 				<div class="dropdown-content" id="LSTMCluster"></div>
 		</div>
-
 		<div class="dropdown">
-			<button class="dropbtn" id="DBPredict">Predict with DB</button>
-				<div class="dropdown-content"></div>
-		</div>
-		<div class="dropdown">
-			<button class="dropbtn">Predict with LSTM</button>
-				<div class="dropdown-content" id="LSTMPredict"></div>
+			<button class="dropbtn">Predict</button>
+			<div class="dropdown-content" id="prediction">
+				
+				epochs: <input class='change' type='text' id='epochs' name='epochs'/><br>
+				Weight file name: <input class='change' type='text' id='predictionName' name='predictionName'/><br>
+				<input class='change' type='submit' id='predict' name='predict'/>
+			</div>
 		</div>
 
 		<script type = "text/javascript" src = "./static/data1.js"></script>

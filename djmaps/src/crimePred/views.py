@@ -149,7 +149,7 @@ def predict(request):
     timeseries = body['timeseries']
     method = body['method']
     periodsAhead_list = body['periodsAhead_list']
-    data_category = body['data_category']
+    name = body['name']
     gridshape = "NONE" if not 'gridshape' in body else body['gridshape']
     ignoreFirst = "NONE" if not 'ignoreFirst' in body else body['ignoreFirst']
     threshold = "NONE" if not 'threshold' in body else body['threshold']
@@ -168,9 +168,9 @@ def predict(request):
         forecast_timeseries_ARIMA(timeseries, forecasted_data, 0, 0,
                                   periodsAhead_list, gridshape, ignoreFirst, threshold, max_dist)
     elif method == "LSTM":
-        model = load_LSTM_model(3, 1)
-        forecast_timeseries_LSTM(model, timeseries, forecasted_data, 3, 1,
-                                 0, 0, periodsAhead_list, gridshape, ignoreFirst, threshold, max_dist)
+        model = load_LSTM_model(10, 1)
+        forecast_timeseries_LSTM(model, timeseries, forecasted_data, 10, 1,
+                                 0, 0, periodsAhead_list, gridshape, ignoreFirst, threshold, max_dist, name)
     else:
         response = HttpResponse(
             'Wrong dataset. Should choose from \'dps\' or \'la\'')
