@@ -28,8 +28,62 @@ from prediction.fwdfiles.forecast_LSTM import forecast_timeseries_LSTM, load_LST
 sys.path.pop(0)
 
 
+def addEdge(neighbor_map, u, v):
+    if u not in neighbor_map:
+        neighbor_map[u] = set([v])
+    else:
+        neighbor_map[u].add(v)
+    if v not in neighbor_map:
+        neighbor_map[v] = set([u])
+    else:
+        neighbor_map[v].add(u)
+
+
+def removeEdge(neighbor_map, u, v):
+    neighbor_map[u].remove(v)
+    neighbor_map[v].remove(u)
+
+
+def reachableNeighborCount(neighbor_map, u, visited):
+    count = 1
+    visited.add(u)
+    for neighbor in list(neighbor_map[u]):
+        if neighbor not in neighbor_map[u]:
+            break
+        if neighbor not in visited:
+            count += reachableNeighborCount(neighbor_map, neighbor, visited)
+    return count
+
+
+def isNextNode(neighbor_map, u, v):
+    if len(neighbor_map[u]) == 1:
+        return True
+    else:
+        count1 = reachableNeighborCount(neighbor_map, u, set())
+        removeEdge(neighbor_map, u, v)
+        count2 = reachableNeighborCount(neighbor_map, u, set())
+        addEdge(neighbor_map, u, v)
+        return False if count1 > count2 else True
+
+
+def printGraph(neighbor_map):
+    for key, value in neighbor_map.items():
+        print(key, ':', value)
+
+
+def fleuryEulerianCircuit(neighbor_map, u, node_path):
+    for v in list(neighbor_map[u]):
+        if v not in neighbor_map[u]:
+            break
+        if isNextNode(neighbor_map, u, v):
+            node_path.append(v)
+            removeEdge(neighbor_map, u, v)
+            fleuryEulerianCircuit(neighbor_map, v, node_path)
+
+
 def index(request):
     return HttpResponse('This is the crimePred index.')
+
 
 def cluster2(request):
     print("CLUSTERING")
@@ -51,13 +105,16 @@ def cluster2(request):
         if y == 0:
             continue
         if float(f['properties']['latitude']) >= lat_min and float(f['properties']['latitude']) <= lat_max and float(f['properties']['longitude']) >= lon_min and float(f['properties']['longitude']) <= lon_max:
-            entries.append([f['properties']['Category'], float(f['properties']['latitude']), float(f['properties']['longitude']), datetime.date(y, m, d)])
+            entries.append([f['properties']['Category'], float(f['properties']['latitude']), float(
+                f['properties']['longitude']), datetime.date(y, m, d)])
     print("DONE PREPROCESSING")
-    data = pd.DataFrame(np.array(entries), columns=['Category', 'Latitude', 'Longitude', "Date"])
+    data = pd.DataFrame(np.array(entries), columns=[
+                        'Category', 'Latitude', 'Longitude', "Date"])
     data.sort_values(['Latitude', 'Longitude', 'Date'], inplace=True)
     data = data.reset_index(drop=True)
     ignoreFirst = 225
-    clusters, realCrimes = computeClustersAndOrganizeData(data, gridshape, ignoreFirst, threshold, 1)
+    clusters, realCrimes = computeClustersAndOrganizeData(
+        data, gridshape, ignoreFirst, threshold, 1)
     border_result = []
     crime_counts = []
     for geometry in clusters.Geometry:
@@ -77,12 +134,23 @@ def cluster2(request):
                     else:
                         border_set.remove(border)
                 num_of_crimes += row[j]
-        border_result.append(list(border_set))
+        neighbor_map = {}
+        for border in border_set:
+            addEdge(neighbor_map, border[:2], border[2:])
+        print('Start Finding Eulerian path...')
+        node_path = []
+        start_point = next(iter(border_set))[:2]
+        fleuryEulerianCircuit(neighbor_map, start_point, node_path)
+        print(node_path)
+        border_result.append(node_path)
         crime_counts.append(num_of_crimes)
         num_of_crimes = 0
-    print(pd.io.json.dumps([border_result, crime_counts]))
-    return HttpResponse(pd.io.json.dumps([border_result, crime_counts]))
-        
+    resp = HttpResponse(pd.io.json.dumps([border_result, crime_counts]))
+    resp['Access-Control-Allow-Origin'] = '*'
+    print(resp)
+    return resp
+
+
 def cluster(request, dataset, gridshape, threshold):
     if dataset == 'dps':
         data = pd.read_pickle(os.path.abspath(
@@ -159,7 +227,8 @@ def predict(request):
     else:
         max_dist = 0
 
-    forecasted_data = np.zeros((len(periodsAhead_list), 1, len(timeseries) // 3))
+    forecasted_data = np.zeros(
+        (len(periodsAhead_list), 1, len(timeseries) // 3))
 
     if method == 'MM':
         forecast_timeseries_MM(timeseries, forecasted_data, 0,
