@@ -4,10 +4,8 @@
 		<meta charset='utf-8' />
 		<title>MAP!</title>
 		<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
-
   		<meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
   		<script src='https://api.tiles.mapbox.com/mapbox-gl-js/v0.49.0/mapbox-gl.js'></script>
-  		<!--<script src='https://api.mapbox.com/mapbox-gl-js/v0.52.0/mapbox-gl.js'></script>-->
   		<link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.49.0/mapbox-gl.css' rel='stylesheet' />
 		<link rel="stylesheet" type="text/css" href="./static/design.css">
 	</head>
@@ -17,46 +15,32 @@
 		<nav id='filter-group' class='filter-group'></nav>
 		<div class="dropdown">
 			<button class="dropbtn">Filter By Crime Type</button>
-				<div class="dropdown-content" id="crimeType">
-					
-				</div>
+			<div class="dropdown-content" id="crimeType"></div>
 		</div>
-
 		<div class="dropdown">
 			<button class="dropbtn">Filter By Date</button>
-				<div class="dropdown-content" id="dates">
-					
-				</div>
+				<div class="dropdown-content" id="dates"></div>
 		</div>
-		
 		<div class="dropdown">
 			<button class="dropbtn">Filter By Time of Day</button>
-				<div class="dropdown-content" id="timeOfDay"></div>
-		</div>
-
+			<div class="dropdown-content" id="timeOfDay"></div></div>
 		<div class="dropdown">
 			<button class="dropbtn">Cluster with DBScan</button>
-				<div class="dropdown-content" id="DBScan"></div>
+			<div class="dropdown-content" id="DBScan"></div>
 		</div>
 
 		<div class="dropdown">
 			<button class="dropbtn">Cluster with LSTM</button>
-				<div class="dropdown-content" id="LSTMCluster"></div>
+			<div class="dropdown-content" id="LSTMCluster"></div>
 		</div>
 		<div class="dropdown">
 			<button class="dropbtn">Predict</button>
 			<div class="dropdown-content" id="prediction">
-				
 				epochs: <input class='change' type='text' id='epochs' name='epochs'/><br>
 				Weight file name: <input class='change' type='text' id='predictionName' name='predictionName'/><br>
 				<input class='change' type='submit' id='predict' name='predict'/>
 			</div>
 		</div>
-
-		<script type = "text/javascript" src = "./static/data1.js"></script>
-
-		
-		
+		<script type = "text/javascript" src = "./static/index.js"></script>
 	</body>
-
 </html>
