@@ -55,7 +55,8 @@ function colors(DBSCANdistance) {
 
 	let i = 1;
 
-	while (colorArr.length < 800) {
+	Math.seedrandom('color-seed')
+	while (colorArr.length < 1024) {
 		let rColor = Math.floor(Math.random() * 256);
 		let gColor = Math.floor(Math.random() * 256);
 		let bColor = Math.floor(Math.random() * 256);
@@ -67,7 +68,6 @@ function colors(DBSCANdistance) {
 			i++;
 		}
 	}
-
 	colorArr.push("#a9a9a9");
 	return colorArr;
 }
@@ -86,7 +86,6 @@ $.getJSON("./static/dataCrime1.json", function (dC) {
 	mapboxgl.accessToken = 'pk.eyJ1Ijoia2F0aGxlZW54dWUiLCJhIjoiY2pyOXU5Z3JlMGxiNzQ5cGgxZmo5MWhzeiJ9.xyOwT8LWfjpOlEvPF2Iy7Q';
 	const map = new mapboxgl.Map({
 		container: 'map',
-		//style: 'mapbox://styles/kathleenxue/cjrd2z9b43cef2spckex2oq0z',
 		style: 'mapbox://styles/mapbox/light-v9',
 		center: [-118.2851, 34.0226],
 		zoom: 14
@@ -111,7 +110,6 @@ $.getJSON("./static/dataCrime1.json", function (dC) {
 
 	let dateCommitted = new Array();
 	let timeCommitted = new Array();
-	let clusters = new Array(); //DBSCAN
 	let clusterBoundaries = [[[[[]]]]];
 
 
@@ -158,7 +156,6 @@ $.getJSON("./static/dataCrime1.json", function (dC) {
 	$("#dates").append("<label for = 'day-Saturdays'>Saturdays</label><br>");
 	$("#dates").append("<input class = 'change' type = 'checkbox' id='day-Sundays' name='day-Sundays' font='sans-serif' checked></input>");
 	$("#dates").append("<label for = 'day-Sundays'>Sundays</label>");
-	//$("#dates").append("<label for = 'day-" + dateCommitted[i] + "'> " + datesFromOrdinal[i] + "</label>");
 
 	$("#timeOfDay").append("<input class = 'change' type = 'checkbox' id='tod-ALL' name='tod-ALL' font='sans-serif' checked></input>");
 	$("#timeOfDay").append("<label for = 'tod-ALL'>Select All</label><br>");
@@ -205,7 +202,6 @@ $.getJSON("./static/dataCrime1.json", function (dC) {
 				filterPoints.push(dataCrimes.features[i]);
 			}
 		}
-		//console.log(dataCrimes.features.length, filterPoints.length);
 		return filterPoints;
 	}
 
@@ -297,32 +293,32 @@ $.getJSON("./static/dataCrime1.json", function (dC) {
 		return lstmClusterTimeSeriesArray;
 	}
 
-	function isInCluster(clusterBoundaries, coordLon, coordLat) {
-		if (clusterBoundaries.length < 3) return false;
-		let pointExtreme = [coordLon, 100];
-		let count = 0;
-		for (let i = 0; i < clusterBoundaries.length; i++) {
-			if (segmentsIntersect(clusterBoundaries[i][0], clusterBoundaries[i][1],
-				clusterBoundaries[i][2], clusterBoundaries[i][3],
-				coordLon, coordLat,
-				pointExtreme[0], pointExtreme[1])) {
-				count++;
-			}
-		}
-		return count % 2 == 1;
-	}
+	// function isInCluster(clusterBoundaries, coordLon, coordLat) {
+	// 	if (clusterBoundaries.length < 3) return false;
+	// 	let pointExtreme = [coordLon, 100];
+	// 	let count = 0;
+	// 	for (let i = 0; i < clusterBoundaries.length; i++) {
+	// 		if (segmentsIntersect(clusterBoundaries[i][0], clusterBoundaries[i][1],
+	// 			clusterBoundaries[i][2], clusterBoundaries[i][3],
+	// 			coordLon, coordLat,
+	// 			pointExtreme[0], pointExtreme[1])) {
+	// 			count++;
+	// 		}
+	// 	}
+	// 	return count % 2 == 1;
+	// }
 
-	function segmentsIntersect(a, b, c, d, p, q, r, s) {
-		let det, gamma, lambda;
-		det = (c - a) * (s - q) - (r - p) * (d - b);
-		if (det === 0) {
-			return false;
-		} else {
-			lambda = ((s - q) * (r - a) + (p - r) * (s - b)) / det;
-			gamma = ((b - d) * (r - a) + (c - a) * (s - b)) / det;
-			return (0 < lambda && lambda < 1) && (0 < gamma && gamma < 1);
-		}
-	}
+	// function segmentsIntersect(a, b, c, d, p, q, r, s) {
+	// 	let det, gamma, lambda;
+	// 	det = (c - a) * (s - q) - (r - p) * (d - b);
+	// 	if (det === 0) {
+	// 		return false;
+	// 	} else {
+	// 		lambda = ((s - q) * (r - a) + (p - r) * (s - b)) / det;
+	// 		gamma = ((b - d) * (r - a) + (c - a) * (s - b)) / det;
+	// 		return (0 < lambda && lambda < 1) && (0 < gamma && gamma < 1);
+	// 	}
+	// }
 
 	function onSegment(pLon, pLat, qLon, qLat, rLon, rLat) {
 		if (qLat <= max(pLat, rLat) && qLat >= min(pLat, rLat) &&
@@ -358,23 +354,23 @@ $.getJSON("./static/dataCrime1.json", function (dC) {
 		return (val > 0) ? 1 : 2;
 	}
 
-	function LSTMpointsInEachCluster(clusterBoundaries, features) {
-		//clusterBoundaries is array of clusters, clusterBoundaries[j] is cluster j of the array
-		//returns an array that gives the points in each LSTM cluster
-		let pointsInEachCluster = new Array(clusterBoundaries.length);
-		let numPointsInAnyCluster = 0;
-		for (let j = 0; j < clusterBoundaries.length; j++) {
-			let curCluster = new Array();
-			for (let i = 0; i < features.length; i++) {
-				if (isInCluster(clusterBoundaries[j], parseFloat(features[i].geometry.coordinates[0]), parseFloat(features[i].geometry.coordinates[1]))) {
-					curCluster.push(features[i]);
-					numPointsInAnyCluster++;
-				}
-				pointsInEachCluster[j] = curCluster;
-			}
-		}
-		return pointsInEachCluster;
-	}
+	// function LSTMpointsInEachCluster(clusterBoundaries, features) {
+	// 	//clusterBoundaries is array of clusters, clusterBoundaries[j] is cluster j of the array
+	// 	//returns an array that gives the points in each LSTM cluster
+	// 	let pointsInEachCluster = new Array(clusterBoundaries.length);
+	// 	let numPointsInAnyCluster = 0;
+	// 	for (let j = 0; j < clusterBoundaries.length; j++) {
+	// 		let curCluster = new Array();
+	// 		for (let i = 0; i < features.length; i++) {
+	// 			if (isInCluster(clusterBoundaries[j], parseFloat(features[i].geometry.coordinates[0]), parseFloat(features[i].geometry.coordinates[1]))) {
+	// 				curCluster.push(features[i]);
+	// 				numPointsInAnyCluster++;
+	// 			}
+	// 			pointsInEachCluster[j] = curCluster;
+	// 		}
+	// 	}
+	// 	return pointsInEachCluster;
+	// }
 
 	function LSTMcontains(pointsInEachCluster, curFeature) {
 		for (let i = 0; i < pointsInEachCluster.length; i++) {
