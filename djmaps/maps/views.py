@@ -16,7 +16,7 @@ def index(request):
 	#TODO: move this token to Django settings from an environment variable
 	#found in the Mapbox account settings and getting started instructions
 	#see https://www.mapbox.com/account/ under the "Access tokens" section
-	return render(request, 'default.html')
+	return render(request, 'index.html')
 
 def dbscan(request):
 	#Before prediction
@@ -26,7 +26,7 @@ def dbscan(request):
 	if request.method == 'POST':
 
 		#distBetweenPoints = []
-		#for inc in np.arange(0.0001, 0.09, 0.0001): 
+		#for inc in np.arange(0.0001, 0.09, 0.0001):
 			#distBetweenPoints.append(inc)
 
 		miles_per_radian = 3958.7613
