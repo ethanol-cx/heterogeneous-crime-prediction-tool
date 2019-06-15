@@ -19,24 +19,31 @@
 	line-height: 34px;
 }
 
-.predict{
-	margin: 15px;
-}
-
-.cluster{
-	margin: 15px;
-}
-
 .filter{
+	margin: 15px;
+}
+
+.cluster-predict{
 	margin: 15px;
 }
 
 .btn-div{
 	text-align: center;
+	padding: 15px;
+}
+/*
+.predict .btn-div{
+	padding: 35px;
+} */
+.btn-div .btn{
+	width: 55%;
 }
 
-.btn-div .btn{
-	width: 35%;
+#grid-x{
+	width: 25%;
+}
+#grid-y{
+	width:25%;
 }
 /*
 .dropbtn {

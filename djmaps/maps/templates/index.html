@@ -54,11 +54,11 @@
 					</div>
 				</div>
 				<br/>
-				<div class="cluster">
-					<span class="label label-rounded label-primary">Cluster with:</span>
-					<br/><br/>
-					<div class='columns col-gapless'>
-						<div class="form-group dbscan column col-6">
+				<div class="cluster-predict">
+					<div class='columns'>
+						<div class="form-group cluster column col-6">
+							<span class="label label-rounded label-primary">Cluster with:</span>
+							<br/>
 							<label class="form-switch">
 								<input type="checkbox">
 								<i class="form-icon"></i> DBSCAN
@@ -69,41 +69,60 @@
 								<input class ='change' type='number' id='DBScanInput' name='DBScanInput' font='sans-serif' value='0.2' min='0.0' max='1' step='0.05'></input>
 								<br/>
 							</div>
-						</div>
-						<div class="form-group naive-clustering column col-6">
 							<label class="form-switch">
 								<input type="checkbox">
 								<i class="form-icon"></i> Naive Clustering
 							</label>
 							<div>
-								<label>Precision of grid</label>
+								<div class='grid-div float-left'>
+									<label>Precision of grid</label>
+									<br/>
+									<input class='change' type='number' id='grid-x' name='grid-x' font='sans-serif' value='16' min='0' max='1000' step='2'></input>
+									<span> x </span>
+									<input class='change' type='number' id='grid-y' name='grid-y' font='sans-serif' value='16' min='0' max='1000' step='2'></input>
+									<br/>
+								</div>
+								<div class='threshold-div'>
+									<label>Threshold </label>
+									<br/>
+									<input class='change' type='number' id='threshold' name='threshold' font='sans-serif' value='1000' min='0' max='100000' step='100'></input>
+									<br/>
+								</div>
+							</div>
+							<div class='btn-div'>
+								<button class="btn">Cluster</button>
+							</div>
+						</div>
+						<div class="form-group predict column col-6">
+							<span class="label label-rounded label-primary">Predict with:</span>
+							<br/>
+							<div class="form-group">
+								<label>Periods Ahead</label>
 								<br/>
-								<input class='change' type='number' id='grid-x' name='grid-x' font='sans-serif' value='16' min='0' max='1000' step='2'></input>
-								<span> x </span>
-								<input class='change' type='number' id='grid-y' name='grid-y' font='sans-serif' value='16' min='0' max='1000' step='2'></input>
+								<input class='change' type='number' id='periods-ahead' name='periods-ahead' font='sans-serif' value='1' min='1' max='8' step='1'></input>
 								<br/>
-								<label>Threshold </label>
-								<br/>
-								<input class='change' type='number' id='threshold' name='threshold' font='sans-serif' value='1000' min='0' max='100000' step='100'></input>
-								<br/><br/>
+								<label class="form-radio">
+									<input type="radio" name="prediction-method" checked>
+									<i class="form-icon"></i> Moving Mean (MM)
+								</label>
+								<label class="form-radio">
+									<input type="radio" name="prediction-method">
+									<i class="form-icon"></i> Autoregressive Integrated Moving Average (ARIMA)
+								</label>
+								<label class="form-radio">
+									<input type="radio" name="prediction-method">
+									<i class="form-icon"></i> Long Short-Term Memory (LSTM)
+								</label>
+								<div class='btn-div'>
+									<button class="btn disabled">Predict</button>
+								</div>
 							</div>
 						</div>
 					</div>
-					<div class='btn-div'>
-						<button class="btn">Cluster</button>
-					</div>
-					<br><br>
-				</div>
-				<div class="predict">
-					<span class="label label-rounded label-primary">Predict with:</span>
 					<br/><br/>
-					<div class="form-group">
-						<div class="dropdown-content" id="prediction">
-						</div>
-						<div class='btn-div'>
-							<button class="btn disabled">Predict</button>
-						</div>
-					</div>
+				</div>
+				<div class="result">
+					<img src="../../src/prediction/results/" class="img-fit-contain " alt="Waiting for the result">
 				</div>
 			</div>
 		</div>
