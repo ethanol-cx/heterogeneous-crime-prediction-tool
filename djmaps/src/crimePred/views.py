@@ -85,7 +85,7 @@ def index(request):
     return HttpResponse('This is the crimePred index.')
 
 
-def cluster2(request):
+def heterogeneousCluster(request):
     print("CLUSTERING")
     pd.options.display.precision = 10
     body_unicode = request.body.decode('utf-8')

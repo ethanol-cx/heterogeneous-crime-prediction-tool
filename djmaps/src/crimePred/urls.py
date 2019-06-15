@@ -6,7 +6,8 @@ register_converter(converters.gridShapeConverter, 'int,int')
 
 
 urlpatterns = [
-	path('cluster2', views.cluster2, name='cluster2'),
+    path('heterogeneous-cluster', views.heterogeneousCluster,
+         name='heterogeneous-cluster'),
     path('cluster/<str:dataset>/<int,int:gridshape>/<int:threshold>',
          views.cluster, name='cluster'),
     path('predict', views.predict, name='predict')
