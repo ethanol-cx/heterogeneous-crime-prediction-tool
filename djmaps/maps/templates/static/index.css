@@ -1,9 +1,12 @@
+body{
+	height: 100vh;
+}
 .container {
 	height: 100vh;
 }
 
 #map {
-	height: 80%;
+	height: 87%;
 }
 
 .dropdown{
@@ -17,6 +20,10 @@
 	padding: 0px;
 	width: 90%;
 	line-height: 34px;
+}
+
+.load{
+	margin: 15px;
 }
 
 .filter{
@@ -37,6 +44,19 @@
 } */
 .btn-div .btn{
 	width: 55%;
+}
+
+.action .label-rounded{
+	margin-bottom: 10px;
+}
+
+.result{
+	height: 15%;
+	text-align:center;
+}
+
+.result img{
+	height: 100%;
 }
 
 #grid-x{
