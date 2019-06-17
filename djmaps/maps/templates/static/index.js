@@ -13,6 +13,11 @@ let eveningEnd = 23;
 let nightStart = 0;
 let nightEnd = 4;
 
+let dataCrimes;
+let dbPredict = [];
+let clusterOfEachPoint = [];
+let timeseriesToPredict = [];
+
 function rgbToHex(color) {
 	let hex = Number(color).toString(16);
 	if (hex.length < 2) {
@@ -607,7 +612,7 @@ function changeFunctionsHookUp(map, dateCommitted, timeCommitted, crimeType) {
 	});
 }
 
-function submitFunctionHookUp(map, dateCommitted, timeCommitted, crimeType){
+function submitFunctionHookUp(map, dateCommitted, timeCommitted, crimeType) {
 	$("#submit").click(function () {
 		console.log('submit hit...');
 		dateCommitted = ["none"];
@@ -640,14 +645,7 @@ function submitFunctionHookUp(map, dateCommitted, timeCommitted, crimeType){
 	});
 }
 
-let dataCrimes;
-let dbPredict = [];
-let clusterOfEachPoint = [];
-let timeseriesToPredict = [];
-
-$.getJSON("./static/dataCrime1.json", function (dC) {
-	dataCrimes = dC;
-
+function loadmap() {
 	mapboxgl.accessToken = 'pk.eyJ1Ijoia2F0aGxlZW54dWUiLCJhIjoiY2pyOXU5Z3JlMGxiNzQ5cGgxZmo5MWhzeiJ9.xyOwT8LWfjpOlEvPF2Iy7Q';
 	const map = new mapboxgl.Map({
 		container: 'map',
@@ -783,7 +781,36 @@ $.getJSON("./static/dataCrime1.json", function (dC) {
 			}
 		});
 	})
-});
+}
+
+function handleFileSelect(evt) {
+	var files = evt.target.files; // FileList object
+
+	// files is a FileList of File objects. List some properties.
+	for (var i = 0, f; f = files[i]; i++) {
+		var reader = new FileReader();
+
+		// Closure to capture the file information.
+		reader.onload = (function (theFile) {
+			return function (e) {
+				console.log('e readAsText = ', e);
+				console.log('e readAsText target = ', e.target);
+				try {
+					json = JSON.parse(e.target.result);
+					dataCrimes = JSON.stringify(json)
+					loadmap()
+				} catch (ex) {
+					alert('ex when trying to parse json = ' + ex);
+				}
+			}
+		})(f);
+		reader.readAsText(f);
+	}
+}
+
+document.getElementById('files').addEventListener('change', handleFileSelect, false);
+
+
 
 
 
