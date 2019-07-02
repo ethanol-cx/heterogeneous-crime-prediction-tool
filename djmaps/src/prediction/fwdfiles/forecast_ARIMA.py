@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-from pyramid.arima import auto_arima
+from pmdarima import auto_arima
 import sklearn.model_selection as ms
 import statsmodels.api as sm
 import sys

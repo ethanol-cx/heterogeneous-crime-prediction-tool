@@ -645,6 +645,51 @@ function submitFunctionHookUp(map, dateCommitted, timeCommitted, crimeType) {
 	});
 }
 
+function addClusterLayersFromBoundaries(data, map){
+    for (let i = 0; i < data[0].length; ++i) {
+        let points = data[0][i]
+        // console.log(points)
+        let clusterID = "cluster" + i;
+        if (data[0][i].length >= 7) {
+            let path_idx = new Map();
+            const start_point = data[0][i][0]
+            for (let j = 0; j < data[0][i].length; ++j) {
+                // javascript set doesn't compare the actual values of an array
+                // therefore, `set.add([1,2]); set.add([1,2]);` results in a set with two elements
+                // therefore, here we use `x * 10000 + y` as a simple hash function to represent the pair [x,y]
+                let hash = data[0][i][j][0] * 10000 + data[0][i][j][1]
+                if (path_idx.has(hash)) {
+                    addClusterLayer(map, clusterID + '_', data[0][i].slice(path_idx.get(hash), j), colorArr[2 * i + 3])
+                    data[0][i].slice(path_idx.get(hash), j)
+                    points = data[0][i].slice(0, path_idx.get(hash)).concat(data[0][i].slice(j));
+                    break;
+                }
+                path_idx.set(hash, j);
+            }
+        }
+        map.addLayer({
+                     "id": clusterID,
+                     "type": "fill",
+                     "source": {
+                     "type": "geojson",
+                     "data": {
+                     "type": "Feature",
+                     "geometry": {
+                     "type": "Polygon",
+                     "coordinates": [points]
+                     }
+                     }
+                     },
+                     "layout": {},
+                     "paint": {
+                     "fill-color": colorArr[2 * i + 3],
+                     "fill-opacity": 0.4
+                     }
+                     });
+    }
+}
+
+
 function loadmap() {
 	mapboxgl.accessToken = 'pk.eyJ1Ijoia2F0aGxlZW54dWUiLCJhIjoiY2pyOXU5Z3JlMGxiNzQ5cGgxZmo5MWhzeiJ9.xyOwT8LWfjpOlEvPF2Iy7Q';
 	const map = new mapboxgl.Map({
@@ -722,65 +767,6 @@ function loadmap() {
 
 	submitFunctionHookUp(map, dateCommitted, timeCommitted, crimeType);
 
-	$(".cluster .btn-div .btn").click(function () {
-		removeExistingClusterLayers(map);
-
-		const grid_x = document.getElementById("grid-x").value;
-		const grid_y = document.getElementById("grid-y").value;
-		const threshold = document.getElementById("threshold").value;
-
-		x = updateFilteredPoints(crimeType, dateCommitted, timeCommitted)
-
-		$.ajax({
-			type: "POST",
-			url: "http://localhost:8000/crimePred/heterogeneous-cluster",
-			data: JSON.stringify({ 'features': x, 'gridShape': "(" + grid_x + "," + grid_y + ")", 'threshold': threshold }),
-			success: function (data) {
-				data = JSON.parse(data);
-				for (let i = 0; i < data[0].length; ++i) {
-					points = data[0][i]
-					// console.log(points)
-					let clusterID = "cluster" + i;
-					if (data[0][i].length >= 7) {
-						let path_idx = new Map();
-						const start_point = data[0][i][0]
-						for (let j = 0; j < data[0][i].length; ++j) {
-							// javascript set doesn't compare the actual values of an array
-							// therefore, `set.add([1,2]); set.add([1,2]);` results in a set with two elements
-							// therefore, here we use `x * 10000 + y` as a simple hash function
-							let hash = data[0][i][j][0] * 10000 + data[0][i][j][1]
-							if (path_idx.has(hash)) {
-								addClusterLayer(map, clusterID + '_', data[0][i].slice(path_idx.get(hash), j), colorArr[2 * i + 3])
-								data[0][i].slice(path_idx.get(hash), j)
-								points = data[0][i].slice(0, path_idx.get(hash)).concat(data[0][i].slice(j));
-								break;
-							}
-							path_idx.set(hash, j);
-						}
-					}
-					map.addLayer({
-						"id": clusterID,
-						"type": "fill",
-						"source": {
-							"type": "geojson",
-							"data": {
-								"type": "Feature",
-								"geometry": {
-									"type": "Polygon",
-									"coordinates": [points]
-								}
-							}
-						},
-						"layout": {},
-						"paint": {
-							"fill-color": colorArr[2 * i + 3],
-							"fill-opacity": 0.4
-						}
-					});
-				}
-			}
-		});
-	})
 }
 
 function handleFileSelect(evt) {
@@ -797,8 +783,8 @@ function handleFileSelect(evt) {
 				console.log('e readAsText target = ', e.target);
 				try {
 					json = JSON.parse(e.target.result);
-					dataCrimes = JSON.stringify(json)
-					loadmap()
+                         dataCrimes = JSON.stringify(json);
+                         loadmap();
 				} catch (ex) {
 					alert('ex when trying to parse json = ' + ex);
 				}

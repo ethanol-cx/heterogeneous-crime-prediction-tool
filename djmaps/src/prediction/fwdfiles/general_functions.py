@@ -6,6 +6,8 @@ import os
 import pickle
 import math
 from pathlib import Path
+import matplotlib
+matplotlib.use('TkAgg')
 from matplotlib import pyplot as plt
 from sklearn.metrics import mean_squared_error
 # count the amount of weeks elapsed since the begining of the database
