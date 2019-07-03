@@ -19,6 +19,10 @@ let clusterOfEachPoint = [];
 let timeseriesToPredict = [];
 let periodsAhead = 1;
 
+let dateCommitted = new Array();
+let timeCommitted = new Array();
+let crimeTypes = new Array();
+
 function rgbToHex(color) {
 	let hex = Number(color).toString(16);
 	if (hex.length < 2) {
@@ -690,7 +694,7 @@ function addClusterLayersFromBoundaries(data, map){
 }
 
 function clusterButtonHookUp(map, dateCommitted, timeCommitted, crimeType){
-	$(".cluster-button").classList.remove('disabled');
+	$(".cluster-button")[0].classList.remove('disabled');
 
 	$(".cluster-button").click(function () {
 		removeExistingClusterLayers(map);
@@ -699,12 +703,11 @@ function clusterButtonHookUp(map, dateCommitted, timeCommitted, crimeType){
 		const grid_y = document.getElementById("grid-y").value;
 		const threshold = document.getElementById("threshold").value;
 
-		x = updateFilteredPoints(crimeType, dateCommitted, timeCommitted)
 
 		$.ajax({
 			type: "POST",
 			url: "http://localhost:8000/crimePred/heterogeneous-cluster",
-			data: JSON.stringify({ 'features': x, 'gridShape': "(" + grid_x + "," + grid_y + ")", 'threshold': threshold }),
+			data: JSON.stringify({ 'features': dataCrimes.features, 'gridShape': "(" + grid_x + "," + grid_y + ")", 'threshold': threshold }),
 			success: function (data) {
 				data = JSON.parse(data);
 				addClusterLayersFromBoundaries(data, map);
@@ -714,13 +717,14 @@ function clusterButtonHookUp(map, dateCommitted, timeCommitted, crimeType){
 }
 
 function predictButtonHookUp(){
+	$(".predict-button")[0].classList.remove('disabled');
+
 	$('.predict-button').click(function () {
-		x = updateFilteredPoints(crimeType, dateCommitted, timeCommitted)
 		$.ajax({
 			type: "POST",
 			url: "http://localhost:8000/crimePred/cluster-predict",
 			data: JSON.stringify({
-				'features': x,
+				'features': dataCrimes.features,
 				'periodsAhead': $('#periods-ahead').val(),
 				'method': $('input[name=prediction-method]:checked')[0].value,
 				'gridshape-x': $('#grid-x').val(),
@@ -751,7 +755,7 @@ function loadmap() {
 		days.add(dataCrimes.features[i].properties.time.toString());
 	}
 
-	let crimeType = new Array();
+	crimeType = new Array();
 
 	ct.forEach(function (value) {
 		crimeType.push(value);
@@ -759,8 +763,8 @@ function loadmap() {
 
 	crimeType.sort();
 
-	let dateCommitted = new Array();
-	let timeCommitted = new Array();
+	dateCommitted = new Array();
+	timeCommitted = new Array();
 
 	days.forEach(function (value) {
 		dateCommitted.push(value);
@@ -812,6 +816,8 @@ function loadmap() {
 	submitFunctionHookUp(map, dateCommitted, timeCommitted, crimeType);
 
 	clusterButtonHookUp(map, dataCrimes, timeCommitted, crimeType);
+
+	predictButtonHookUp(map, dataCrimes, timeCommitted, crimeTypes);
 }
 
 function handleFileSelect(evt) {

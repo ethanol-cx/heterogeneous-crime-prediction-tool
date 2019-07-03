@@ -8,6 +8,7 @@ import numpy as np
 import json
 from ast import literal_eval
 import datetime
+import pandas as pd
 
 # get the parent directory
 current_path = os.path.abspath(getsourcefile(lambda: 0))
@@ -84,26 +85,32 @@ def fleuryEulerianCircuit(neighbor_map, u, node_path):
 def index(request):
     return HttpResponse('This is the crimePred index.')
 
-                        
+
+
 def convertFromFeaturesToData(features):
     lon_min = -118.297
     lon_max = -118.27
     lat_min = 34.015
     lat_max = 34.038
-    print(len(features))
-    for f in features:
-        d = f['properties']['time'].split('T')[0]
-        y, m, d = map(int, d.split('-'))
-        if y == 0:
-            continue
-        if float(f['properties']['latitude']) >= lat_min and float(f['properties']['latitude']) <= lat_max and float(f['properties']['longitude']) >= lon_min and float(f['properties']['longitude']) <= lon_max:
-            entries.append([f['properties']['Category'], float(f['properties']['latitude']), float(
-                f['properties']['longitude']), datetime.date(y, m, d)])
-    print("DONE PREPROCESSING")
-    data = pd.DataFrame(np.array(entries), columns=[
-                        'Category', 'Latitude', 'Longitude', "Date"])
+    data = pd.read_json(json.dumps([feature.properties for feature in features]))
+    data = data['properties']
+    print(type(data))
+    print(data)
+    data = data[['Category', 'Latitude', 'Longitude', 'Date']]
+
+    print("Minimum latitude: %f" % min(data["Latitude"]))
+    print("Maximum latitude: %f" % max(data["Latitude"]))
+    print()
+    print("Minimum longitude: %f" % min(data["Longitude"]))
+    print("Maximum longitude: %f" % max(data["Longitude"]))
+    print("Number of datapoints before selecting: {}".format(len(data.index)))
+    # Select square window
+    data = data[(lon_min <= data.Latitude) & (data.Latitude <= lon_max)
+                & (lat_min <= data.Longitude) & (data.Longitude <= lat_max)]
+    print("Number of datapoints after selecting: {}".format(len(data.index)))
     data.sort_values(['Latitude', 'Longitude', 'Date'], inplace=True)
     data = data.reset_index(drop=True)
+    return data
 
 def heterogeneousCluster(request):
     print("CLUSTERING")
@@ -176,6 +183,7 @@ def cluster(request, dataset, gridshape, threshold):
         response = HttpResponse(
             'Wrong dataset. Should choose from \'dps\' or \'la\'')
         response.status_code = 422
+        response['Access-Control-Allow-Origin'] = '*'
         return response
     try:
         clusters, realCrimes = computeClustersAndOrganizeData(
@@ -205,11 +213,13 @@ def cluster(request, dataset, gridshape, threshold):
         response = HttpResponse(pd.io.json.dumps(
             [border_result, crime_counts]))
         response.status_code = 200
+        response['Access-Control-Allow-Origin'] = '*'
         return response
     except:
         response = HttpResponse('Internal server error with the followint inputs:\ndataset: {}, gridshape: {}, threshold: {}'.format(
             dataset, gridshape, threshold))
         response.status_code = 400
+        response['Access-Control-Allow-Origin'] = '*'
         return response
 
 
