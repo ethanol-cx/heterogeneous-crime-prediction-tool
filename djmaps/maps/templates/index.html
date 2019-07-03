@@ -113,15 +113,15 @@
 								<input class='change' type='number' id='periods-ahead' name='periods-ahead' font='sans-serif' value='1' min='1' max='8' step='1'></input>
 								<br/>
 								<label class="form-radio">
-									<input type="radio" name="prediction-method" checked>
+									<input type="radio" name="prediction-method"  value='MM' checked>
 									<i class="form-icon"></i> Moving Mean (MM)
 								</label>
 								<label class="form-radio">
-									<input type="radio" name="prediction-method">
+									<input type="radio" name="prediction-method"  value="ARIMA">
 									<i class="form-icon"></i> Autoregressive Integrated Moving Average (ARIMA)
 								</label>
 								<label class="form-radio">
-									<input type="radio" name="prediction-method">
+									<input type="radio" name="prediction-method" value="LSTM">
 									<i class="form-icon"></i> Long Short-Term Memory (LSTM)
 								</label>
 							</div>
@@ -129,10 +129,10 @@
 					</div>
 					<div class='columns buttons'>
 						<div class='btn-div col-6'>
-							<button class="btn">Cluster</button>
+							<button class="btn disabled cluster-button">Cluster</button>
 						</div>
 						<div class='btn-div col-6'>
-							<button class="btn disabled">Predict</button>
+							<button class="btn disabled predict-button">Predict</button>
 						</div>
 					</div>
 				</div>

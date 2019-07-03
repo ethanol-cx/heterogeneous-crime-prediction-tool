@@ -12,7 +12,7 @@ from matplotlib import pyplot as plt
 from sklearn.metrics import mean_squared_error
 # count the amount of weeks elapsed since the begining of the database
 from math import radians, cos, sin, asin, sqrt
-
+import base64
 
 def getBorderCordinates(lon_max, lon_min, lat_max, lat_min, gridshape, i, j):
     """Given the cell number i and j, return the borders of the cell. Each
@@ -80,7 +80,9 @@ def savePredictions(clusters, realCrimes, forecasts, method,
     output = open(fileName, 'wb')
     pickle.dump((clusters, realCrimes, forecasts), output)
     output.close()
-    return
+    with open("filename", "rb") as imageFile:
+        data = base64.b64encode(imageFile.read())
+        return data
 
 
 def saveParameters(orders, seasonal_orders, method,

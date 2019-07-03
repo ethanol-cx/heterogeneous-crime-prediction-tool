@@ -1,6 +1,0 @@
-bounding box (usc area)
-filter based on mondays to fris (days of the week), sat-sun, time of day
-pop out boxes for each data point
-different colors for points?
-bigger map size
-DBSCAN

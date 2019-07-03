@@ -84,16 +84,8 @@ def fleuryEulerianCircuit(neighbor_map, u, node_path):
 def index(request):
     return HttpResponse('This is the crimePred index.')
 
-
-def heterogeneousCluster(request):
-    print("CLUSTERING")
-    pd.options.display.precision = 10
-    body_unicode = request.body.decode('utf-8')
-    body = json.loads(body_unicode)
-    features = body['features']
-    threshold = int(body['threshold'])
-    gridshape = literal_eval(body['gridShape'])
-    entries = []
+                        
+def convertFromFeaturesToData(features):
     lon_min = -118.297
     lon_max = -118.27
     lat_min = 34.015
@@ -112,6 +104,17 @@ def heterogeneousCluster(request):
                         'Category', 'Latitude', 'Longitude', "Date"])
     data.sort_values(['Latitude', 'Longitude', 'Date'], inplace=True)
     data = data.reset_index(drop=True)
+
+def heterogeneousCluster(request):
+    print("CLUSTERING")
+    pd.options.display.precision = 10
+    body_unicode = request.body.decode('utf-8')
+    body = json.loads(body_unicode)
+    features = body['features']
+    threshold = int(body['threshold'])
+    gridshape = literal_eval(body['gridShape'])
+    entries = []
+    data = convertFromFeaturesToData(features)
     ignoreFirst = 225
     clusters, realCrimes = computeClustersAndOrganizeData(
         data, gridshape, ignoreFirst, threshold, 1)
@@ -248,5 +251,42 @@ def predict(request):
 
     response = HttpResponse(pd.io.json.dumps(forecasted_data.reshape(
         -1, len(timeseries) // 3)))
+    response.status_code = 200
+    return response
+
+def clusterAndPredict(request):
+    body_unicode = request.body.decode('utf-8')
+    body = json.loads(body_unicode)
+
+    gridshape = [int(body['grid-x']), int(body['grid-y'])]
+    method = body['method']
+    threshold = int(body['threshold'])
+    maxDist = 1
+    ignoreFirst = len(data) // 3
+    print('ignore First', ignoreFirst)
+    periodsAhead_list = [int(body['periodsAhead'])] 
+
+    # Compute the cluster/grid distribution based on the threshold.
+    print('Computing clusters ...')
+
+    # In grid_prediction, which predict the crimes without clustering, the threshold is set to 0
+    # `clusters` is the cluster distributions
+    clusters, realCrimes = computeClustersAndOrganizeData(
+        data, gridshape, ignoreFirst, threshold, maxDist)
+
+    print('Number of clusters: {}'.format(len(clusters)))
+    print('Computing predictions ...')
+
+    result = ''
+    if method == "LSTM":
+        result = forecast_LSTM(clusters=clusters, realCrimes=realCrimes,
+                          periodsAhead_list=periodsAhead_list, gridshape=gridshape, ignoreFirst=ignoreFirst, threshold=threshold, maxDist=maxDist)
+    elif method == "ARIMA" or method == "AR":
+        result = forecast_ARIMA(method=method, clusters=clusters, realCrimes=realCrimes,
+                           periodsAhead_list=periodsAhead_list, gridshape=gridshape, ignoreFirst=ignoreFirst, threshold=threshold, maxDist=maxDist, orders=[], seasonal_orders=[])
+    else:
+        result = forecast_MM(method=method, clusters=clusters, realCrimes=realCrimes,
+                        periodsAhead_list=periodsAhead_list, gridshape=gridshape, ignoreFirst=ignoreFirst, threshold=threshold, maxDist=maxDist)
+    response = HttpResponse(result)
     response.status_code = 200
     return response

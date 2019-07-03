@@ -17,6 +17,7 @@ let dataCrimes;
 let dbPredict = [];
 let clusterOfEachPoint = [];
 let timeseriesToPredict = [];
+let periodsAhead = 1;
 
 function rgbToHex(color) {
 	let hex = Number(color).toString(16);
@@ -297,7 +298,6 @@ function addClusterLayer(map, id, points, color) {
 
 function changeFunctionsHookUp(map, dateCommitted, timeCommitted, crimeType) {
 	$(".change").change(function () {
-		console.log('changing filter...')
 		let numDaysOfWeekChecked = 7
 		let numTimesOfDayChecked = 5;
 		if ($(this).prop("checked")) {
@@ -685,10 +685,55 @@ function addClusterLayersFromBoundaries(data, map){
                      "fill-color": colorArr[2 * i + 3],
                      "fill-opacity": 0.4
                      }
-                     });
+                    });
     }
 }
 
+function clusterButtonHookUp(map, dateCommitted, timeCommitted, crimeType){
+	$(".cluster-button").classList.remove('disabled');
+
+	$(".cluster-button").click(function () {
+		removeExistingClusterLayers(map);
+
+		const grid_x = document.getElementById("grid-x").value;
+		const grid_y = document.getElementById("grid-y").value;
+		const threshold = document.getElementById("threshold").value;
+
+		x = updateFilteredPoints(crimeType, dateCommitted, timeCommitted)
+
+		$.ajax({
+			type: "POST",
+			url: "http://localhost:8000/crimePred/heterogeneous-cluster",
+			data: JSON.stringify({ 'features': x, 'gridShape': "(" + grid_x + "," + grid_y + ")", 'threshold': threshold }),
+			success: function (data) {
+				data = JSON.parse(data);
+				addClusterLayersFromBoundaries(data, map);
+			}
+		});
+	});
+}
+
+function predictButtonHookUp(){
+	$('.predict-button').click(function () {
+		x = updateFilteredPoints(crimeType, dateCommitted, timeCommitted)
+		$.ajax({
+			type: "POST",
+			url: "http://localhost:8000/crimePred/cluster-predict",
+			data: JSON.stringify({
+				'features': x,
+				'periodsAhead': $('#periods-ahead').val(),
+				'method': $('input[name=prediction-method]:checked')[0].value,
+				'gridshape-x': $('#grid-x').val(),
+				'gridshape-y': $('#grid-y').val(),
+				'threshold': $('#threshold').val()
+			}),
+			success: function (data3) {
+				dbPredict = data3;
+				console.log("PREDICT: " + dbPredict);
+			}
+		});
+	});
+}
 
 function loadmap() {
 	mapboxgl.accessToken = 'pk.eyJ1Ijoia2F0aGxlZW54dWUiLCJhIjoiY2pyOXU5Z3JlMGxiNzQ5cGgxZmo5MWhzeiJ9.xyOwT8LWfjpOlEvPF2Iy7Q';
@@ -767,38 +812,33 @@ function loadmap() {
 
 	submitFunctionHookUp(map, dateCommitted, timeCommitted, crimeType);
 
+	clusterButtonHookUp(map, dataCrimes, timeCommitted, crimeType);
 }
 
 function handleFileSelect(evt) {
-	var files = evt.target.files; // FileList object
+	let files = evt.target.files; // FileList object
 
 	// files is a FileList of File objects. List some properties.
-	for (var i = 0, f; f = files[i]; i++) {
-		var reader = new FileReader();
+	for (let i = 0, f; f = files[i]; i++) {
+		let reader = new FileReader();
 
 		// Closure to capture the file information.
 		reader.onload = (function (theFile) {
 			return function (e) {
-				console.log('e readAsText = ', e);
-				console.log('e readAsText target = ', e.target);
+				dataCrimes = e.target.result;
 				try {
-					json = JSON.parse(e.target.result);
-                         dataCrimes = JSON.stringify(json);
-                         loadmap();
+					dataCrimes = JSON.parse(dataCrimes);
 				} catch (ex) {
 					alert('ex when trying to parse json = ' + ex);
 				}
+				loadmap();
 			}
 		})(f);
 		reader.readAsText(f);
 	}
 }
 
-document.getElementById('files').addEventListener('change', handleFileSelect, false);
-
-
-
-
+document.getElementsByClassName('files')[0].addEventListener('change', handleFileSelect, false);
 
 // $(document).ready(function () {
 // 	$("#DBPredict").click(function () {
@@ -813,23 +853,7 @@ document.getElementById('files').addEventListener('change', handleFileSelect, fa
 
 // 	});
 
-// 	$('#predict').click(function () {
-// 		$.ajax({
-// 			type: "POST",
-// 			url: "http://localhost:8000/crimePred/predict",
-// 			data: JSON.stringify({
-// 				'features': x,
-// 				'periodsAhead_list': [10],
-// 				'timeseries': timeseriesToPredict,
-// 				'name': $('#predictionName').val(),
-// 				'method': 'LSTM'
-// 			}),
-// 			success: function (data3) {
-// 				dbPredict = data3;
-// 				console.log("PREDICT: " + dbPredict);
-// 			}
-// 		});
-// 	});
+
 
 
 // 	$("#DBSCANsubmit").click(function () {
@@ -1075,9 +1099,6 @@ document.getElementById('files').addEventListener('change', handleFileSelect, fa
 // 	// these HTTP methods do not require CSRF protection
 // 	return (/^(GET|HEAD|OPTIONS|TRACE)$/.test(method));
 // }
-
-
-console.log('Before change function hookup...')
 
 
 
