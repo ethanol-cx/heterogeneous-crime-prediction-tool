@@ -727,9 +727,8 @@ function predictButtonHookUp(){
 				'gridshape-y': $('#grid-y').val(),
 				'threshold': $('#threshold').val()
 			}),
-			success: function (data3) {
-				dbPredict = data3;
-				console.log("PREDICT: " + dbPredict);
+			success: function (imageData) {
+				$('.result img')[0].src=imageData
 			}
 		});
 	});
