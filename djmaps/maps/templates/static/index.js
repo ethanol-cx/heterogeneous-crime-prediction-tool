@@ -852,7 +852,6 @@ function handleFileSelect(evt) {
 			return function (e) {
 				dataCrimes = e.target.result;
 				try {
-					console.log(dataCrimes)
 					dataCrimes = JSON.parse(dataCrimes);
 				} catch (ex) {
 					alert('ex when trying to parse json = ' + ex);
