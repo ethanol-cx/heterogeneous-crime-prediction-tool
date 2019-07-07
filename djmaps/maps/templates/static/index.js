@@ -104,12 +104,12 @@ function updateFilteredPoints(crimeType, dateCommitted, timeCommitted) {
 	dateCommitteds = new Set(dateCommitted);
 	crimeTypes = new Set(crimeType);
 	timeCommitteds = new Set(times);
-	for (let i = 0; i < dataCrimes.features.length; i++) {
-		let category = dataCrimes.features[i].properties.Category;
-		let date = dataCrimes.features[i].properties.time;
-		let time = dataCrimes.features[i].properties.time;
+	for (let i = 0; i < dataCrimes.length; i++) {
+		let category = dataCrimes[i].properties.Category;
+		let date = dataCrimes[i].properties.time;
+		let time = dataCrimes[i].properties.time;
 		if (filterExists(crimeTypes, category, 0) && filterExists(dateCommitteds, date, 1) && filterExists(timeCommitteds, time.split('T')[1], 1)) {
-			filterPoints.push(dataCrimes.features[i]);
+			filterPoints.push(dataCrimes[i]);
 		}
 	}
 	return filterPoints;
@@ -707,7 +707,7 @@ function clusterButtonHookUp(map, dateCommitted, timeCommitted, crimeType){
 		$.ajax({
 			type: "POST",
 			url: "http://localhost:8000/crimePred/heterogeneous-cluster",
-			data: JSON.stringify({ 'features': dataCrimes.features, 'gridShape': "(" + grid_x + "," + grid_y + ")", 'threshold': threshold }),
+			data: JSON.stringify({ 'features': dataCrimes, 'gridShape': "(" + grid_x + "," + grid_y + ")", 'threshold': threshold }),
 			success: function (data) {
 				data = JSON.parse(data);
 				addClusterLayersFromBoundaries(data, map);
@@ -720,15 +720,16 @@ function predictButtonHookUp(){
 	$(".predict-button")[0].classList.remove('disabled');
 
 	$('.predict-button').click(function () {
+		console.log('predict button clicked');
 		$.ajax({
 			type: "POST",
 			url: "http://localhost:8000/crimePred/cluster-predict",
 			data: JSON.stringify({
-				'features': dataCrimes.features,
+				'features': dataCrimes,
 				'periodsAhead': $('#periods-ahead').val(),
 				'method': $('input[name=prediction-method]:checked')[0].value,
-				'gridshape-x': $('#grid-x').val(),
-				'gridshape-y': $('#grid-y').val(),
+				'grid-x': $('#grid-x').val(),
+				'grid-y': $('#grid-y').val(),
 				'threshold': $('#threshold').val()
 			}),
 			success: function (imageData) {
@@ -736,6 +737,23 @@ function predictButtonHookUp(){
 			}
 		});
 	});
+}
+
+function formatDataToMatbox(){
+	let matbox = {
+		"type": "FeatureCollection",
+		"name": "dps",
+		"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" }},
+		"features": []
+	}
+	for (let i = 0; i < dataCrimes.length; ++i){
+		matbox['features'].push({
+			"type": "Feature", 
+			"properties": dataCrimes[i], 
+			"geometry": { "type": "Point", "coordinates": [dataCrimes[i].Longitude, dataCrimes[i].Latitude] }
+		})
+	}
+	return matbox;
 }
 
 function loadmap() {
@@ -750,9 +768,9 @@ function loadmap() {
 	let ct = new Set();
 	let days = new Set();
 
-	for (let i = 0; i < dataCrimes.features.length; i++) {
-		ct.add(dataCrimes.features[i].properties.Category);
-		days.add(dataCrimes.features[i].properties.time.toString());
+	for (let i = 0; i < dataCrimes.length; i++) {
+		ct.add(dataCrimes[i].properties.Category);
+		days.add(dataCrimes[i].properties.time.toString());
 	}
 
 	crimeType = new Array();
@@ -779,10 +797,12 @@ function loadmap() {
 	let DBSCANdistance = "0cluster";
 	colorArr = colors(DBSCANdistance);
 
+	matboxData = formatDataToMatbox();
+	
 	map.on('load', function () {
 		map.addSource("dataCrimes", {
 			"type": "geojson",
-			"data": dataCrimes
+			"data": matboxData
 		});
 
 		//MAP LAYER: ALL CRIMES
@@ -832,6 +852,7 @@ function handleFileSelect(evt) {
 			return function (e) {
 				dataCrimes = e.target.result;
 				try {
+					console.log(dataCrimes)
 					dataCrimes = JSON.parse(dataCrimes);
 				} catch (ex) {
 					alert('ex when trying to parse json = ' + ex);

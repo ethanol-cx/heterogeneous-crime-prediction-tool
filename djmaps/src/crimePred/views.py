@@ -93,10 +93,6 @@ def convertFromFeaturesToData(features):
     lat_min = 34.015
     lat_max = 34.038
     data = pd.read_json(json.dumps([feature.properties for feature in features]))
-    data = data['properties']
-    print(type(data))
-    print(data)
-    data = data[['Category', 'Latitude', 'Longitude', 'Date']]
 
     print("Minimum latitude: %f" % min(data["Latitude"]))
     print("Maximum latitude: %f" % max(data["Latitude"]))
@@ -267,7 +263,7 @@ def predict(request):
 def clusterAndPredict(request):
     body_unicode = request.body.decode('utf-8')
     body = json.loads(body_unicode)
-
+    data = convertFromFeaturesToData(body['features'])
     gridshape = [int(body['grid-x']), int(body['grid-y'])]
     method = body['method']
     threshold = int(body['threshold'])
