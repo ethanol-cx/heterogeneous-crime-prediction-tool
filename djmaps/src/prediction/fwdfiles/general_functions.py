@@ -80,10 +80,7 @@ def savePredictions(clusters, realCrimes, forecasts, method,
     output = open(fileName, 'wb')
     pickle.dump((clusters, realCrimes, forecasts), output)
     output.close()
-    with open("filename", "rb") as imageFile:
-        data = base64.b64encode(imageFile.read())
-        return data
-
+    return fileName
 
 def saveParameters(orders, seasonal_orders, method,
                    gridshape, cluster_id, ignoreFirst,

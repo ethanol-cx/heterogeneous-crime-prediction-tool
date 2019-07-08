@@ -63,5 +63,5 @@ def forecast_MM(method, clusters, realCrimes, periodsAhead_list, gridshape, igno
         forecasts = pd.DataFrame(data=forecasted_data[i].T, columns=['C{}_Forecast'.format(c)
                                                                      for c in clusters.Cluster.values])
         forecasts.index = df[-test_size:].index
-        savePredictions(clusters, realCrimes, forecasts, method,
+        return savePredictions(clusters, realCrimes, forecasts, method,
                         gridshape, ignoreFirst, periodsAhead, threshold, maxDist)
