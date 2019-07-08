@@ -7,39 +7,13 @@ from .general_functions import savePredictions, saveParameters, getIfParametersE
 # Compute predictions using Seasonal Moving Average Model
 
 
-def dynamic_mm_predictions(df, look_back, start, end):
+def dynamic_ma_predictions(df, look_back, start, end):
     results = np.zeros(end - start + 1)
     window = np.array(df[start-look_back:start])
     for i in range(start, end+1):
         results[i-start] = window.sum() * 1.0 / look_back
         window = np.append(window[1:], [results[i-start]])
     return results
-
-
-def forecast_timeseries_MM(timeseries, forecasted_data, cluster_cntr, periodsAhead_list, gridshape, ignoreFirst, threshold, maxDist):
-    test_size = len(timeseries) // 3
-    train = timeseries[:-test_size]
-    look_back = 3
-
-    # for each predict horizon - `periodsAhead`, we perform rolling time series prediction with different window sizes
-    # Note: the the `start` and the `end` defines the window and splits the observation and the "y_test"
-    for periodsAhead in periodsAhead_list:
-        periodsAhead_cntr += 1
-        predictions = np.zeros(test_size)
-        for i in range(test_size):
-            pred = dynamic_mm_predictions(
-                timeseries, look_back, i+len(train)-periodsAhead, i+len(train))
-            predictions[i] = pred[-1]
-            # history.append(pd.Series(test[i]), ignore_index=True)
-
-        # apply the assumption that all predictions should be non-negative
-        predictions = [x if x >= 0 else 0 for x in predictions]
-
-        # store the prediction to the corresponding column `periodsAhead_cntr` and `cluster_cntr`
-        forecasted_data[periodsAhead_cntr][cluster_cntr] = predictions
-
-    # reset the periodsAhead_cntr
-    periodsAhead_cntr = -1
 
 
 def forecast_MM(method, clusters, realCrimes, periodsAhead_list, gridshape, ignoreFirst, threshold, maxDist):
@@ -59,13 +33,35 @@ def forecast_MM(method, clusters, realCrimes, periodsAhead_list, gridshape, igno
         train = df[:-test_size]
         if train.sum() < 2:
             continue
-        forecast_timeseries_MM(df, forecasted_data, cluster_cntr,
-                               periodsAhead_list, gridshape, ignoreFirst, threshold, maxDist)
+
+        look_back = 3
+
+        # for each predict horizon - `periodsAhead`, we perform rolling time series prediction with different window sizes
+        # Note: the the `start` and the `end` defines the window and splits the observation and the "y_test"
+        for periodsAhead in periodsAhead_list:
+            print(method, threshold, c, periodsAhead)
+            periodsAhead_cntr += 1
+            predictions = np.zeros(test_size)
+            for i in range(test_size):
+                pred = dynamic_ma_predictions(
+                    df, look_back, i+len(train)-periodsAhead, i+len(train))
+                predictions[i] = pred[-1]
+                # history.append(pd.Series(test[i]), ignore_index=True)
+
+            # apply the assumption that all predictions should be non-negative
+            predictions = [x if x >= 0 else 0 for x in predictions]
+
+            # store the prediction to the corresponding column `periodsAhead_cntr` and `cluster_cntr`
+            forecasted_data[periodsAhead_cntr][cluster_cntr] = predictions
+
+        # reset the periodsAhead_cntr
+        periodsAhead_cntr = -1
+
     # store the prediction
     for i in range(len(periodsAhead_list)):
         periodsAhead = periodsAhead_list[i]
         forecasts = pd.DataFrame(data=forecasted_data[i].T, columns=['C{}_Forecast'.format(c)
                                                                      for c in clusters.Cluster.values])
         forecasts.index = df[-test_size:].index
-        return savePredictions(clusters, realCrimes, forecasts, method,
+        savePredictions(clusters, realCrimes, forecasts, method,
                         gridshape, ignoreFirst, periodsAhead, threshold, maxDist)

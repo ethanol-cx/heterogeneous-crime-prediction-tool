@@ -21,9 +21,9 @@ sys.path.insert(0, parent_dir)
 # import the packages from the parent directory
 from prediction.fwdfiles.cluster_functions import computeClustersAndOrganizeData
 from prediction.fwdfiles.general_functions import getBorderCordinates
-from prediction.fwdfiles.forecast_MM import forecast_timeseries_MM
-from prediction.fwdfiles.forecast_ARIMA import forecast_timeseries_ARIMA
-from prediction.fwdfiles.forecast_LSTM import forecast_timeseries_LSTM, load_LSTM_model
+from prediction.fwdfiles.forecast_MM import forecast_MM
+from prediction.fwdfiles.forecast_ARIMA import forecast_ARIMA
+from prediction.fwdfiles.forecast_LSTM import forecast_LSTM, load_LSTM_model
 
 # reset the sys.path
 sys.path.pop(0)
@@ -85,8 +85,6 @@ def fleuryEulerianCircuit(neighbor_map, u, node_path):
 def index(request):
     return HttpResponse('This is the crimePred index.')
 
-
-
 def convertFromFeaturesToData(features):
     lon_min = -118.297
     lon_max = -118.27
@@ -96,7 +94,6 @@ def convertFromFeaturesToData(features):
     print(data.head)
     print("Minimum latitude: %f" % min(data["Latitude"]))
     print("Maximum latitude: %f" % max(data["Latitude"]))
-    print()
     print("Minimum longitude: %f" % min(data["Longitude"]))
     print("Maximum longitude: %f" % max(data["Longitude"]))
     print("Number of datapoints before selecting: {}".format(len(data.index)))
@@ -223,58 +220,16 @@ def cluster(request, dataset, gridshape, threshold):
         response['Access-Control-Allow-Origin'] = '*'
         return response
 
-
-def predict(request):
-    body_unicode = request.body.decode('utf-8')
-    body = json.loads(body_unicode)
-
-    timeseries = body['timeseries']
-    method = body['method']
-    periodsAhead_list = body['periodsAhead_list']
-    name = body['name']
-    gridshape = "NONE" if not 'gridshape' in body else body['gridshape']
-    ignoreFirst = "NONE" if not 'ignoreFirst' in body else body['ignoreFirst']
-    threshold = "NONE" if not 'threshold' in body else body['threshold']
-
-    if threshold and threshold != 0:
-        max_dist = 1
-    else:
-        max_dist = 0
-
-    forecasted_data = np.zeros(
-        (len(periodsAhead_list), 1, len(timeseries) // 3))
-
-    if method == 'MM':
-        forecast_timeseries_MM(timeseries, forecasted_data, 0,
-                               periodsAhead_list, gridshape, ignoreFirst, threshold, max_dist)
-    elif method == "ARIMA":
-        forecast_timeseries_ARIMA(timeseries, forecasted_data, 0, 0,
-                                  periodsAhead_list, gridshape, ignoreFirst, threshold, max_dist)
-    elif method == "LSTM":
-        model = load_LSTM_model(10, 1)
-        forecast_timeseries_LSTM(model, timeseries, forecasted_data, 10, 1,
-                                 0, 0, periodsAhead_list, gridshape, ignoreFirst, threshold, max_dist, name)
-    else:
-        response = HttpResponse(
-            'Wrong dataset. Should choose from \'dps\' or \'la\'')
-        response.status_code = 422
-        return response
-
-    response = HttpResponse(pd.io.json.dumps(forecasted_data.reshape(
-        -1, len(timeseries) // 3)))
-    response.status_code = 200
-    return response
-
 def clusterAndPredict(request):
     body_unicode = request.body.decode('utf-8')
     body = json.loads(body_unicode)
     data = convertFromFeaturesToData(body['features'])
-    gridshape = [int(body['grid-x']), int(body['grid-y'])]
+    gridshape = tuple((int(body['grid-x']), int(body['grid-y'])))
+    print('gridshape {}'.format(gridshape))
     method = body['method']
     threshold = int(body['threshold'])
     maxDist = 1
-    ignoreFirst = len(data) // 3
-    print('ignore First', ignoreFirst)
+    ignoreFirst = 225
     periodsAhead_list = [int(body['periodsAhead'])] 
 
     # Compute the cluster/grid distribution based on the threshold.
@@ -301,3 +256,44 @@ def clusterAndPredict(request):
     response = HttpResponse(result)
     response.status_code = 200
     return response
+
+# def predict(request):
+#     body_unicode = request.body.decode('utf-8')
+#     body = json.loads(body_unicode)
+
+#     timeseries = body['timeseries']
+#     method = body['method']
+#     periodsAhead_list = body['periodsAhead_list']
+#     name = body['name']
+#     gridshape = "NONE" if not 'gridshape' in body else body['gridshape']
+#     ignoreFirst = "NONE" if not 'ignoreFirst' in body else body['ignoreFirst']
+#     threshold = "NONE" if not 'threshold' in body else body['threshold']
+
+#     if threshold and threshold != 0:
+#         max_dist = 1
+#     else:
+#         max_dist = 0
+
+#     forecasted_data = np.zeros(
+#         (len(periodsAhead_list), 1, len(timeseries) // 3))
+
+#     if method == 'MM':
+#         forecast_timeseries_MM(timeseries, forecasted_data, 0,
+#                                periodsAhead_list, gridshape, ignoreFirst, threshold, max_dist)
+#     elif method == "ARIMA":
+#         forecast_timeseries_ARIMA(timeseries, forecasted_data, 0, 0,
+#                                   periodsAhead_list, gridshape, ignoreFirst, threshold, max_dist)
+#     elif method == "LSTM":
+#         model = load_LSTM_model(10, 1)
+#         forecast_timeseries_LSTM(model, timeseries, forecasted_data, 10, 1,
+#                                  0, 0, periodsAhead_list, gridshape, ignoreFirst, threshold, max_dist, name)
+#     else:
+#         response = HttpResponse(
+#             'Wrong dataset. Should choose from \'dps\' or \'la\'')
+#         response.status_code = 422
+#         return response
+
+#     response = HttpResponse(pd.io.json.dumps(forecasted_data.reshape(
+#         -1, len(timeseries) // 3)))
+#     response.status_code = 200
+#     return response

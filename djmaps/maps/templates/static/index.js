@@ -23,6 +23,8 @@ let dateCommitted = new Array();
 let timeCommitted = new Array();
 let crimeTypes = new Array();
 
+let colorArr = new Array();
+
 function rgbToHex(color) {
 	let hex = Number(color).toString(16);
 	if (hex.length < 2) {
@@ -54,7 +56,7 @@ function fullRGBtoHex(r, g, b) {
 */
 
 function colors(DBSCANdistance) {
-	let colorArr = new Array();
+	colorArr = new Array();
 	let usedColors = new Set();
 
 	colorArr.push("match");
@@ -793,7 +795,6 @@ function loadmap() {
 	appendTimes();
 	appendCrimeTypes(crimeType);
 
-	let colorArr = new Array();
 	let DBSCANdistance = "0cluster";
 	colorArr = colors(DBSCANdistance);
 
