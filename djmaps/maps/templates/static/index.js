@@ -105,9 +105,9 @@ function updateFilteredPoints(crimeType, dateCommitted, timeCommitted) {
 	crimeTypes = new Set(crimeType);
 	timeCommitteds = new Set(times);
 	for (let i = 0; i < dataCrimes.length; i++) {
-		let category = dataCrimes[i].properties.Category;
-		let date = dataCrimes[i].properties.time;
-		let time = dataCrimes[i].properties.time;
+		let category = dataCrimes[i][0];
+		let date = dataCrimes[i][3];
+		let time = dataCrimes[i][3];
 		if (filterExists(crimeTypes, category, 0) && filterExists(dateCommitteds, date, 1) && filterExists(timeCommitteds, time.split('T')[1], 1)) {
 			filterPoints.push(dataCrimes[i]);
 		}
@@ -126,7 +126,7 @@ function findDBScanCluster(DBSCANdistance, features) {
 	//find the cluster of the crime
 	//append the crime's cluster of the crime's
 	for (let i = 0; i < features.length; i++) {
-		d = features[i].properties.time;
+		d = features[i][3];
 		let dayOfCrime = new Date(d);
 		let dayDiff = dayOfCrime.getDate() - dayOfCrime.getDay();
 		let weekOfCrime = new Date(dayOfCrime.setDate(dayDiff));
@@ -224,12 +224,12 @@ function mouseOnPointsEvent(map, popup) {
 		map.getCanvas().style.cursor = 'pointer';
 		//if(popup) popup.remove();
 		let coordinates = e.features[0].geometry.coordinates.slice();
-		let crimeDate = e.features[0].properties.time;
+		let crimeDate = e.features[0][3];
 		let crimeMonth = crimeDate.slice(5, 7);
 		let crimeDay = crimeDate.slice(8, 10);
 		let crimeYear = crimeDate.slice(0, 4);
 		let crimeTime = crimeDate.slice(11, 16);
-		let description = "<b>Type: " + e.features[0].properties.Category + "</b><br>Date: "
+		let description = "<b>Type: " + e.features[0][0] + "</b><br>Date: "
 			+ crimeMonth + "-" + crimeDay + "-" + crimeYear + "<br>"
 			+ "Time: " + crimeTime + ":00 PST<br>"
 		// + "DBScan Cluster: " + e.features[0].properties[DBSCANdistance] + "<br>"
@@ -750,7 +750,7 @@ function formatDataToMatbox(){
 		matbox['features'].push({
 			"type": "Feature", 
 			"properties": dataCrimes[i], 
-			"geometry": { "type": "Point", "coordinates": [dataCrimes[i].Longitude, dataCrimes[i].Latitude] }
+			"geometry": { "type": "Point", "coordinates": [dataCrimes[i][2], dataCrimes[i][1]] }
 		})
 	}
 	return matbox;
@@ -769,8 +769,8 @@ function loadmap() {
 	let days = new Set();
 
 	for (let i = 0; i < dataCrimes.length; i++) {
-		ct.add(dataCrimes[i].properties.Category);
-		days.add(dataCrimes[i].properties.time.toString());
+		ct.add(dataCrimes[i][0]);
+		days.add(dataCrimes[i][3]);
 	}
 
 	crimeType = new Array();
@@ -958,7 +958,7 @@ document.getElementsByClassName('files')[0].addEventListener('change', handleFil
 // 	let lstmClusterTimeSeries = {};
 
 // 	for (let i = 0; i < features.length; i++) {
-// 		_time = features[i].properties.time;
+// 		_time = features[i][3];
 // 		let dayOfCrime = new Date(_time);
 // 		let dayDiff = dayOfCrime.getDate() - dayOfCrime.getDay();
 // 		let weekOfCrime = new Date(dayOfCrime.setDate(dayDiff));
@@ -1079,8 +1079,8 @@ document.getElementsByClassName('files')[0].addEventListener('change', handleFil
 // 		curClustFeature = pointsInEachCluster[i];
 // 		//console.log(curClustFeature.geometry);
 // 		if (curClustFeature.geometry.coordinates[0] == curFeature.geometry.coordinates[0] && curClustFeature.geometry.coordinates[1] == curFeature.geometry.coordinates[1]
-// 			&& curClustFeature.properties.time == curFeature.properties.time
-// 			&& curClustFeature.properties.Category == curFeature.properties.Category) {
+// 			&& curClustFeature[3] == curFeature[3]
+// 			&& curClustFeature[0] == curFeature[0]) {
 // 			return true;
 // 		}
 // 	}

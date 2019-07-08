@@ -92,8 +92,8 @@ def convertFromFeaturesToData(features):
     lon_max = -118.27
     lat_min = 34.015
     lat_max = 34.038
-    data = pd.read_json(json.dumps([feature.properties for feature in features]))
-
+    data = pd.DataFrame(features, columns=['Category', 'Latitude', 'Longitude', 'Date'])
+    print(data.head)
     print("Minimum latitude: %f" % min(data["Latitude"]))
     print("Maximum latitude: %f" % max(data["Latitude"]))
     print()
@@ -101,14 +101,19 @@ def convertFromFeaturesToData(features):
     print("Maximum longitude: %f" % max(data["Longitude"]))
     print("Number of datapoints before selecting: {}".format(len(data.index)))
     # Select square window
-    data = data[(lon_min <= data.Latitude) & (data.Latitude <= lon_max)
-                & (lat_min <= data.Longitude) & (data.Longitude <= lat_max)]
+    data = data[(lat_min <= data.Latitude) & (data.Latitude <= lat_max)
+                & (lon_min <= data.Longitude) & (data.Longitude <= lon_max)]
     print("Number of datapoints after selecting: {}".format(len(data.index)))
     data.sort_values(['Latitude', 'Longitude', 'Date'], inplace=True)
     data = data.reset_index(drop=True)
     return data
 
 def heterogeneousCluster(request):
+    lon_min = -118.297
+    lon_max = -118.27
+    lat_min = 34.015
+    lat_max = 34.038
+
     print("CLUSTERING")
     pd.options.display.precision = 10
     body_unicode = request.body.decode('utf-8')
