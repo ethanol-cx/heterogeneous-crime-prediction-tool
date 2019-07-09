@@ -254,6 +254,7 @@ def clusterAndPredict(request):
         result = forecast_MM(method=method, clusters=clusters, realCrimes=realCrimes,
                         periodsAhead_list=periodsAhead_list, gridshape=gridshape, ignoreFirst=ignoreFirst, threshold=threshold, maxDist=maxDist)
     response = HttpResponse(result)
+    response['Access-Control-Allow-Origin'] = '*'
     response.status_code = 200
     return response
 
