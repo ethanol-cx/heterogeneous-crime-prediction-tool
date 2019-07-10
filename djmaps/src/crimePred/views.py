@@ -9,9 +9,9 @@ import json
 from ast import literal_eval
 import datetime
 import pandas as pd
-import matplotlib.pyplot as plt
 import pickle 
 import subprocess
+import base64
 
 # get the parent directory
 current_path = os.path.abspath(getsourcefile(lambda: 0))
@@ -262,10 +262,9 @@ def clusterAndPredict(request):
                         periodsAhead_list=periodsAhead_list, gridshape=gridshape, ignoreFirst=ignoreFirst, threshold=threshold, maxDist=maxDist)
 
     resource_indexes = [0, 40] #temprorary
-    compute_resource_allocation(resource_indexes, 1, [gridshape], periodsAhead_list, ignoreFirst, [threshold], 1, [method], lon_min, lon_max, lat_min, lat_max)
+    file_path = compute_resource_allocation(resource_indexes, 1, [gridshape], periodsAhead_list, ignoreFirst, [threshold], 1, [method], lon_min, lon_max, lat_min, lat_max)
 
-    filename = "{}_{}_({}x{})({})_{}_ahead.pkl".format('LA' if ignoreFirst == 104 else 'USC', method, gridshape[0], gridshape[1], threshold, periodsAhead_list[0])
-    file_path = os.path.abspath("results/resource_allocation/{}".format(filename))
+    filename = "{}_{}_({}x{})({})_{}_ahead.png".format('LA' if ignoreFirst == 104 else 'USC', method, gridshape[0], gridshape[1], threshold, periodsAhead_list[0])
     image_path = os.path.abspath('results/plot/{}').format(filename)
 
     # result = pd.read_pickle(file_path)
@@ -274,8 +273,8 @@ def clusterAndPredict(request):
     # plt.savefig(image_path)
     # plt.close()
     print('Done saving')
-    
-    subprocess.run(['python3 {} {}'.format(file_path, image_path)])
+
+    subprocess.run(['python3', os.path.abspath('plotResult.py'), file_path, image_path])
     with open(image_path, "rb") as imageFile:
         image_data = base64.b64encode(imageFile.read())
     print('Got Image Data')

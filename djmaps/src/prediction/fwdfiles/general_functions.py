@@ -127,6 +127,7 @@ def compute_resource_allocation(resource_indexes, cell_coverage_units, gridshape
         for method in methods:
             for threshold in thresholds:
                 for gridshape in gridshapes:
+                    print('output')
                     output_filename = os.path.abspath("results/resource_allocation/{}_{}_({}x{})({})_{}_ahead.pkl".format(
                         'LA' if ignoreFirst == 104 else 'USC', method, gridshape[0], gridshape[1], threshold, periodsAhead))
                     file = os.path.abspath("results/{}/{}_predictions_grid({},{})_ignore({})_ahead({})_threshold({})_dist({}).pkl".format(
@@ -134,7 +135,8 @@ def compute_resource_allocation(resource_indexes, cell_coverage_units, gridshape
                     clusters, realCrimes, forecasts = pd.read_pickle(file)
                     unit_area = getAreaFromLatLon(
                         lon1=lon_min, lon2=lon_max, lat1=lat_min, lat2=lat_max) / (gridshape[0] * gridshape[1])
-
                     scores = fixResourceAvailable(resource_indexes, forecasts, realCrimes, clusters, cell_coverage_units, unit_area).rename(
                         "{} ({}x{})({})".format(method, gridshape[0], gridshape[1], threshold))
-                    scores.to_pickle(output_filename)
+                    with open(output_filename, "wb") as ofile:
+                        pickle.dump(scores, ofile)
+                    return output_filename

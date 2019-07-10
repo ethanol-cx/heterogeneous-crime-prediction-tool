@@ -735,7 +735,9 @@ function predictButtonHookUp(){
 				'threshold': $('#threshold').val()
 			}),
 			success: function (imageData) {
-				$('.result img')[0].src=imageData
+				$('.empty')[0].remove()
+				$('.result img')[0].src=`data:image/png;base64, ${imageData}`
+				$('.result img')[0].classList.classList.remove('d-none')
 			}
 		});
 	});
