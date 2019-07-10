@@ -223,38 +223,31 @@ function appendCrimeTypes(crimeType) {
 function mouseOnPointsEvent(map, popup) {
 	map.on('mouseenter', 'crimes', function (e) {
 		// Change the cursor style as a UI indicator.
-		map.getCanvas().style.cursor = 'pointer';
-		//if(popup) popup.remove();
-		let coordinates = e.features[0].geometry.coordinates.slice();
-		let crimeDate = e.features[0][3];
-		let crimeMonth = crimeDate.slice(5, 7);
-		let crimeDay = crimeDate.slice(8, 10);
-		let crimeYear = crimeDate.slice(0, 4);
-		let crimeTime = crimeDate.slice(11, 16);
-		let description = "<b>Type: " + e.features[0][0] + "</b><br>Date: "
-			+ crimeMonth + "-" + crimeDay + "-" + crimeYear + "<br>"
-			+ "Time: " + crimeTime + ":00 PST<br>"
+		console.log(e);
+		let description = `<b>Type: ${e.features[0].properties[0]} </b><br/>
+							Date: ${e.features[0].properties[3]} <br/> 
+							${e.features.length} incident(s) happened here.`
 		// + "DBScan Cluster: " + e.features[0].properties[DBSCANdistance] + "<br>"
 		// + "LSTM Cluster: " + e.features[0].properties['lstmCluster'] + "<br>";
 
-		if (dbPredict.length > 0) {
-			dbPredictData = $.parseJSON(dbPredict);
-			//dbPredict = JSON.parse(dbPredict);
-			let pred = dbPredictData[0][e.features[0].properties[DBSCANdistance]];
-			if (e.features[0].properties[DBSCANdistance] == -1) pred = 0;
-			description += "Predicted # of Crimes: " + pred + "<br>";
-		}
+		// if (dbPredict.length > 0) {
+		// 	dbPredictData = $.parseJSON(dbPredict);
+		// 	//dbPredict = JSON.parse(dbPredict);
+		// 	let pred = dbPredictData[0][e.features[0].properties[DBSCANdistance]];
+		// 	if (e.features[0].properties[DBSCANdistance] == -1) pred = 0;
+		// 	description += "Predicted # of Crimes: " + pred + "<br>";
+		// }
 
-		// Ensure that if the map is zoomed out such that multiple
-		// copies of the feature are visible, the popup appears
-		// over the copy being pointed to.
-		while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
-			coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
-		}
+		// // Ensure that if the map is zoomed out such that multiple
+		// // copies of the feature are visible, the popup appears
+		// // over the copy being pointed to.
+		// while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
+		// 	coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
+		// }
 
 		// Populate the popup and set its coordinates
 		// based on the feature found.
-		popup.setLngLat(coordinates)
+		popup.setLngLat([e.features[0].properties[2], e.features[0].properties[1]])
 			.setHTML(description)
 			.addTo(map);
 	});
@@ -737,7 +730,7 @@ function predictButtonHookUp(){
 			success: function (imageData) {
 				$('.empty')[0].remove()
 				$('.result img')[0].src=`data:image/png;base64, ${imageData}`
-				$('.result img')[0].classList.classList.remove('d-none')
+				$('.result img')[0].classList.remove('d-none')
 			}
 		});
 	});
