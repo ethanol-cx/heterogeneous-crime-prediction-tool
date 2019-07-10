@@ -134,5 +134,5 @@ def forecast_LSTM(clusters, realCrimes, periodsAhead_list, gridshape, ignoreFirs
         periodsAhead = periodsAhead_list[i]
         forecasts = pd.DataFrame(data=forecasted_data[i].T, columns=['C{}_Forecast'.format(c)
                                                                      for c in clusters.Cluster.values])
-        return savePredictions(clusters, realCrimes, forecasts, 'LSTM',
+        savePredictions(clusters, realCrimes, forecasts, 'LSTM',
                         gridshape, ignoreFirst, periodsAhead, threshold, maxDist)

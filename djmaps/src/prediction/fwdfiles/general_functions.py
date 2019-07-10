@@ -13,6 +13,7 @@ from sklearn.metrics import mean_squared_error
 # count the amount of weeks elapsed since the begining of the database
 from math import radians, cos, sin, asin, sqrt
 import base64
+from ..fwdfiles.resourceAllocation_functions import fixResourceAvailable
 
 def getBorderCordinates(lon_max, lon_min, lat_max, lat_min, gridshape, i, j):
     """Given the cell number i and j, return the borders of the cell. Each
@@ -116,3 +117,24 @@ def plotTimeSeries(df, testPredict, file_path):
     plt.plot(testPredict)
     plt.savefig(file_path)
     plt.close()
+
+
+def compute_resource_allocation(resource_indexes, cell_coverage_units, gridshapes, periodsAhead_list, ignoreFirst, thresholds, dist, methods, lon_min, lon_max, lat_min, lat_max):
+    for periodsAhead in periodsAhead_list:
+        os.makedirs(os.path.abspath("results/"), exist_ok=True)
+        os.makedirs(os.path.abspath(
+            "results/resource_allocation"), exist_ok=True)
+        for method in methods:
+            for threshold in thresholds:
+                for gridshape in gridshapes:
+                    output_filename = os.path.abspath("results/resource_allocation/{}_{}_({}x{})({})_{}_ahead.pkl".format(
+                        'LA' if ignoreFirst == 104 else 'USC', method, gridshape[0], gridshape[1], threshold, periodsAhead))
+                    file = os.path.abspath("results/{}/{}_predictions_grid({},{})_ignore({})_ahead({})_threshold({})_dist({}).pkl".format(
+                        method, method, gridshape[0], gridshape[1], ignoreFirst, periodsAhead, threshold, dist))
+                    clusters, realCrimes, forecasts = pd.read_pickle(file)
+                    unit_area = getAreaFromLatLon(
+                        lon1=lon_min, lon2=lon_max, lat1=lat_min, lat2=lat_max) / (gridshape[0] * gridshape[1])
+
+                    scores = fixResourceAvailable(resource_indexes, forecasts, realCrimes, clusters, cell_coverage_units, unit_area).rename(
+                        "{} ({}x{})({})".format(method, gridshape[0], gridshape[1], threshold))
+                    scores.to_pickle(output_filename)

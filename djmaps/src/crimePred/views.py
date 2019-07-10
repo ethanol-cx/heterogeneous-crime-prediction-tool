@@ -9,6 +9,9 @@ import json
 from ast import literal_eval
 import datetime
 import pandas as pd
+import matplotlib.pyplot as plt
+import pickle 
+import subprocess
 
 # get the parent directory
 current_path = os.path.abspath(getsourcefile(lambda: 0))
@@ -20,12 +23,12 @@ sys.path.insert(0, parent_dir)
 
 # import the packages from the parent directory
 from prediction.fwdfiles.cluster_functions import computeClustersAndOrganizeData
-from prediction.fwdfiles.general_functions import getBorderCordinates
+from prediction.fwdfiles.general_functions import getBorderCordinates, compute_resource_allocation
 from prediction.fwdfiles.forecast_MM import forecast_MM
 from prediction.fwdfiles.forecast_ARIMA import forecast_ARIMA
 from prediction.fwdfiles.forecast_LSTM import forecast_LSTM, load_LSTM_model
-
-# reset the sys.path
+ 
+ # reset the sys.path
 sys.path.pop(0)
 
 
@@ -155,7 +158,6 @@ def heterogeneousCluster(request):
         num_of_crimes = 0
     resp = HttpResponse(pd.io.json.dumps([border_result, crime_counts]))
     resp['Access-Control-Allow-Origin'] = '*'
-    print(resp)
     return resp
 
 
@@ -221,6 +223,11 @@ def cluster(request, dataset, gridshape, threshold):
         return response
 
 def clusterAndPredict(request):
+    lon_min = -118.297
+    lon_max = -118.27
+    lat_min = 34.015
+    lat_max = 34.038
+
     body_unicode = request.body.decode('utf-8')
     body = json.loads(body_unicode)
     data = convertFromFeaturesToData(body['features'])
@@ -245,15 +252,34 @@ def clusterAndPredict(request):
 
     result = ''
     if method == "LSTM":
-        result = forecast_LSTM(clusters=clusters, realCrimes=realCrimes,
+        forecast_LSTM(clusters=clusters, realCrimes=realCrimes,
                           periodsAhead_list=periodsAhead_list, gridshape=gridshape, ignoreFirst=ignoreFirst, threshold=threshold, maxDist=maxDist)
     elif method == "ARIMA" or method == "AR":
-        result = forecast_ARIMA(method=method, clusters=clusters, realCrimes=realCrimes,
+        forecast_ARIMA(method=method, clusters=clusters, realCrimes=realCrimes,
                            periodsAhead_list=periodsAhead_list, gridshape=gridshape, ignoreFirst=ignoreFirst, threshold=threshold, maxDist=maxDist, orders=[], seasonal_orders=[])
     else:
-        result = forecast_MM(method=method, clusters=clusters, realCrimes=realCrimes,
+        forecast_MM(method=method, clusters=clusters, realCrimes=realCrimes,
                         periodsAhead_list=periodsAhead_list, gridshape=gridshape, ignoreFirst=ignoreFirst, threshold=threshold, maxDist=maxDist)
-    response = HttpResponse(result)
+
+    resource_indexes = [0, 40] #temprorary
+    compute_resource_allocation(resource_indexes, 1, [gridshape], periodsAhead_list, ignoreFirst, [threshold], 1, [method], lon_min, lon_max, lat_min, lat_max)
+
+    filename = "{}_{}_({}x{})({})_{}_ahead.pkl".format('LA' if ignoreFirst == 104 else 'USC', method, gridshape[0], gridshape[1], threshold, periodsAhead_list[0])
+    file_path = os.path.abspath("results/resource_allocation/{}".format(filename))
+    image_path = os.path.abspath('results/plot/{}').format(filename)
+
+    # result = pd.read_pickle(file_path)
+    # plt.plot(result)
+    # # plt.legend()
+    # plt.savefig(image_path)
+    # plt.close()
+    print('Done saving')
+    
+    subprocess.run(['python3 {} {}'.format(file_path, image_path)])
+    with open(image_path, "rb") as imageFile:
+        image_data = base64.b64encode(imageFile.read())
+    print('Got Image Data')
+    response = HttpResponse(image_data)
     response['Access-Control-Allow-Origin'] = '*'
     response.status_code = 200
     return response
