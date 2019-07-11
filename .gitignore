@@ -1,3 +1,20 @@
+# Annoying tilde backup files
+*~
+.idea
+.vscode
+*.log
+*.swp
+
+__pycache__/*
+*/__pycache__/*
+.ipynb_checkpoints/*
+.vscode/*
+parameters/*
+config.py
+*.png
+*.ipynb
+observations/*
+
 .DS_Store
 djmaps/.DS_Store
 djmaps/src/prediction/.DS_Store
