@@ -144,7 +144,6 @@ function findDBScanCluster(DBSCANdistance, features) {
 	}
 	DBScanClusterTimeSeriesArray = [];
 	keys = Object.keys(DBScanClusterTimeSeries).sort();
-	console.log(keys);
 	last = keys.length - 1;
 	while (keys[last] == "NaN") {
 		last--;
@@ -223,7 +222,6 @@ function appendCrimeTypes(crimeType) {
 function mouseOnPointsEvent(map, popup) {
 	map.on('mouseenter', 'crimes', function (e) {
 		// Change the cursor style as a UI indicator.
-		console.log(e);
 		let description = `<b>Type: ${e.features[0].properties[0]} </b><br/>
 							Date: ${e.features[0].properties[3]} <br/> 
 							${e.features.length} incident(s) happened here.`
@@ -396,7 +394,6 @@ function changeFunctionsHookUp(map, dateCommitted, timeCommitted, crimeType) {
 
 					for (let i = 0; i < dateCommitted.length; i++) {
 						let curDate = new Date(dateCommitted[i]);
-						console.log(curDate);
 					}
 				}
 			}
@@ -482,7 +479,6 @@ function changeFunctionsHookUp(map, dateCommitted, timeCommitted, crimeType) {
 					$("#crimeType input[name='crimeType-NONE']:checkbox").prop('checked', false);
 				}
 				else if ($(this).prop("name").slice(10) == "NONE") {
-					//console.log(crimeType[crimeType.length - 1]);
 					crimeType = ["none"];
 					$('#crimeType input:checkbox').prop('checked', false);
 					$("#dates input[name='day-ALL']:checkbox").prop('checked', true);
@@ -491,21 +487,12 @@ function changeFunctionsHookUp(map, dateCommitted, timeCommitted, crimeType) {
 				}
 				else {
 					crimeType.push($(this).prop("name").slice(10));
-					//console.log(crimeType[crimeType.length - 1]);
 					$("#crimeType input[name='crimeType-NONE']:checkbox").prop('checked', false);
 				}
 			}
 			// if a day was checked add to dates array
 			// if a type was checked add to types array
 		} else {
-			/*if($(this).prop("name").slice(0,3) == "day") {
-				//console.log($(this).prop("name"));
-				for(let i = 0; i < dateCommitted.length; i++) {
-					if($(this).prop("name").slice(4) == dateCommitted[i]) dateCommitted.splice(i,1);
-				}
-				$("#dates input[name='day-ALL']:checkbox").prop('checked', false);
-			}*/
-
 			if ($(this).prop("name").slice(0, 9) == "crimeType") {
 				//console.log($(this).prop("name"));
 				for (let i = crimeType.length - 1; i >= 0; i--) {
@@ -689,15 +676,41 @@ function addClusterLayersFromBoundaries(data, map){
 }
 
 function clusterButtonHookUp(map, dateCommitted, timeCommitted, crimeType){
-	$(".cluster-button")[0].classList.remove('disabled');
-
+	$(".cluster-button")[0].classList.remove('disabled');	
 	$(".cluster-button").click(function () {
 		removeExistingClusterLayers(map);
+		const method = $('input[name=cluster-method]:checked')[0].value
+		if (method === 'DBSCAN'){
+			x = updateFilteredPoints(crimeType, dateCommitted, timeCommitted)
+			$.ajax({
+				type: "POST",
+				url: "http://localhost:8000/dbscan",
+				data: JSON.stringify({ 'features': x, 'dist': document.getElementById("DBScanInput").value }),
+				success: function (data) {
+					data = JSON.parse(data);
+					data2 = [];
+					for (let key = 0; key < x.length; key++) {
+						data2[key] = {};
+						data2[key]['geometry'] = data['geometry'][key];
+						data2[key]['type'] = data['type'][key];
+						data2[key]['properties'] = data['properties'][key];
+						//console.log(dataCrimes);
+					}
+					dataCrimes['features'] = data2;
+					map.getSource('dataCrimes').setData(dataCrimes);
+					timeseries = findDBScanCluster(DBSCANdistance, x);
+					timeseriesToPredict = timeseries;
+					console.log("DBSCANNED " + timeseries);
 
+					//console.log(data2);
+					//console.log(dataCrimes);
+				}
+			});
+			return
+		}
 		const grid_x = document.getElementById("grid-x").value;
 		const grid_y = document.getElementById("grid-y").value;
 		const threshold = document.getElementById("threshold").value;
-
 
 		$.ajax({
 			type: "POST",
@@ -715,7 +728,6 @@ function predictButtonHookUp(){
 	$(".predict-button")[0].classList.remove('disabled');
 
 	$('.predict-button').click(function () {
-		console.log('predict button clicked');
 		$.ajax({
 			type: "POST",
 			url: "http://localhost:8000/crimePred/cluster-predict",
@@ -725,7 +737,8 @@ function predictButtonHookUp(){
 				'method': $('input[name=prediction-method]:checked')[0].value,
 				'grid-x': $('#grid-x').val(),
 				'grid-y': $('#grid-y').val(),
-				'threshold': $('#threshold').val()
+				'threshold': $('#threshold').val(),
+				'metricPrecision': $('#metric-precision').val()
 			}),
 			success: function (imageData) {
 				$('.empty')[0].remove()

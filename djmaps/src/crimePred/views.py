@@ -235,6 +235,7 @@ def clusterAndPredict(request):
     print('gridshape {}'.format(gridshape))
     method = body['method']
     threshold = int(body['threshold'])
+    metricPrecision = int(body['metricPrecision'])
     maxDist = 1
     ignoreFirst = 225
     periodsAhead_list = [int(body['periodsAhead'])] 
@@ -261,7 +262,7 @@ def clusterAndPredict(request):
         forecast_MM(method=method, clusters=clusters, realCrimes=realCrimes,
                         periodsAhead_list=periodsAhead_list, gridshape=gridshape, ignoreFirst=ignoreFirst, threshold=threshold, maxDist=maxDist)
 
-    resource_indexes = [0, 40] #temprorary
+    resource_indexes = range(0, 40, metricPrecision)
     file_path = compute_resource_allocation(resource_indexes, 1, [gridshape], periodsAhead_list, ignoreFirst, [threshold], 1, [method], lon_min, lon_max, lat_min, lat_max)
 
     filename = "{}_{}_({}x{})({})_{}_ahead.png".format('LA' if ignoreFirst == 104 else 'USC', method, gridshape[0], gridshape[1], threshold, periodsAhead_list[0])
