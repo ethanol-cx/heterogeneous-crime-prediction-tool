@@ -720,8 +720,7 @@ function clusterButtonHookUp(map, dateCommitted, timeCommitted, crimeType){
 			url: "http://localhost:8000/crimePred/heterogeneous-cluster",
 			data: JSON.stringify({ 'features': dataCrimes, 'gridShape': "(" + grid_x + "," + grid_y + ")", 'threshold': threshold }),
 			success: function (data) {
-				$('.cluster-button')[0].classList.add('loading');
-				$('.cluster-button')[0].classList.add('loading-lrg');
+				$('.cluster-button')[0].classList.remove('loading');
 				data = JSON.parse(data);
 				addClusterLayersFromBoundaries(data, map);
 			}
@@ -731,7 +730,6 @@ function clusterButtonHookUp(map, dateCommitted, timeCommitted, crimeType){
 
 function predictButtonHookUp(){
 	$(".predict-button")[0].classList.remove('disabled');
-	
 	$('.predict-button').click(function () {
 	$('.predict-button')[0].classList.add('loading');
 	$('.predict-button')[0].classList.add('loading-lrg');
@@ -750,7 +748,6 @@ function predictButtonHookUp(){
 			}),
 			success: function (imageData) {
 				$('.predict-button')[0].classList.remove('loading');
-				$('.predict-button')[0].classList.remove('loading-lrg');
 				$('.empty')[0].remove()
 				$('.result img')[0].src=`data:image/png;base64, ${imageData}`
 				$('.result img')[0].classList.remove('d-none')

@@ -267,6 +267,9 @@ def clusterAndPredict(request):
     file_path = compute_resource_allocation(resource_indexes, 1, [gridshape], periodsAhead_list, ignoreFirst, [threshold], 1, [method], lon_min, lon_max, lat_min, lat_max)
 
     filename = "{}_{}_({}x{})({})_{}_ahead.png".format('LA' if ignoreFirst == 104 else 'USC', method, gridshape[0], gridshape[1], threshold, periodsAhead_list[0])
+    os.makedirs(os.path.abspath("results/"), exist_ok=True)
+    os.makedirs(os.path.abspath(
+            "results/plot"), exist_ok=True)
     image_path = os.path.abspath('results/plot/{}').format(filename)
 
     # result = pd.read_pickle(file_path)
