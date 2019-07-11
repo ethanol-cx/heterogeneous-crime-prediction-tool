@@ -13,7 +13,7 @@
 		<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
 	</head>
 	<body>
-		<h1 class='title column col-6 col-mx-auto'>DPS Crime Map</h1>
+		<h1 class='title column col-3 col-mx-auto'>DPS Crime Map</h1>
 		<div class='container columns col-gapless'>
 			<div id='map' class='column col-6'></div>
 			<div class='action column col-6'>
@@ -26,11 +26,11 @@
 					</div>
 					<div class='col-1'>
 					</div>
-					<div class = 'col-2'>
+					<!-- <div class = 'col-2'>
 						<a href="#" class="btn" tabindex="0">
 							Upload
 						</a>
-					</div>
+					</div> -->
 				</div>
 				<div class='filter'>
 					<div>
@@ -81,20 +81,21 @@
 								<div class='grid-div float-left'>
 									<label>Precision of grid</label>
 									<br/>
-									<input class='change' type='number' id='grid-x' name='grid-x' font='sans-serif' value='16' min='0' max='1000' step='2'></input>
+									<input type='number' id='grid-x' name='grid-x' font='sans-serif' value='16' min='0' max='1000' step='2'></input>
 									<span> x </span>
-									<input class='change' type='number' id='grid-y' name='grid-y' font='sans-serif' value='16' min='0' max='1000' step='2'></input>
+									<input type='number' id='grid-y' name='grid-y' font='sans-serif' value='16' min='0' max='1000' step='2'></input>
 									<br/>
 								</div>
+								<div class='clearfix'></div>
 								<div class='threshold-div'>
 									<label>Threshold </label>
 									<br/>
-									<input class='change' type='number' id='threshold' name='threshold' font='sans-serif' value='1000' min='0' max='100000' step='100'></input>
+									<input type='number' id='threshold' name='threshold' font='sans-serif' value='1000' min='0' max='100000' step='100'></input>
 									<br/>
 								</div>
 							</div>
 							<br/>
-							<div class="divider text-center" data-content="OR"></div>
+							<!-- <div class="divider text-center" data-content="OR"></div>
 							<label class="form-radio">
 								<input type="radio" name="cluster-method"  value='DBSCAN'>
 								<i class="form-icon"></i> DBSCAN
@@ -104,22 +105,28 @@
 								<br/>
 								<input class ='change' type='number' id='DBScanInput' name='DBScanInput' font='sans-serif' value='0.2' min='0.0' max='1' step='0.05'></input>
 								<br/>
-							</div>
+							</div> -->
 						</div>
 						<div class="form-group predict column col-6">
-							<span class="label label-rounded label-primary">Predict with (Naive Clustering):</span>
+							<span class="label label-rounded label-primary">Predict with:</span>
 							<div class="form-group">
 								<div class="columns">
-									<div class="periodsAhead column col-6">
+									<div class="periodsAhead column col-4">
 										<label>Periods Ahead</label>
 										<br/>
-										<input class='change' type='number' id='periods-ahead' name='periods-ahead' font='sans-serif' value='1' min='1' max='8' step='1'></input>
+										<input type='number' id='periods-ahead' name='periods-ahead' font='sans-serif' value='1' min='1' max='8' step='1'></input>
 										<br/>
 									</div>
-									<div class="metricIndex column col-6">
-										<label>Metric Index Precision</label>
+									<div class="metricIndex column col-4">
+										<label>Index Precision</label>
 										<br/>
-										<input class='change' type='number' id='metric-precision' name='metric-precision' font='sans-serif' value='12' min='4' max='40' step='4'></input>
+										<input type='number' id='metric-precision' name='metric-precision' font='sans-serif' value='12' min='4' max='40' step='4'></input>
+										<br/>
+									</div>
+									<div class="metricIndex column col-4">
+										<label>Index Max Value</label>
+										<br/>
+										<input type='number' id='metric-max' name='metric-max' font='sans-serif' value='40' min='4' max='500' step='10'></input>
 										<br/>
 									</div>
 								</div>

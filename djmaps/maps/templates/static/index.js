@@ -680,34 +680,37 @@ function clusterButtonHookUp(map, dateCommitted, timeCommitted, crimeType){
 	$(".cluster-button").click(function () {
 		removeExistingClusterLayers(map);
 		const method = $('input[name=cluster-method]:checked')[0].value
-		if (method === 'DBSCAN'){
-			x = updateFilteredPoints(crimeType, dateCommitted, timeCommitted)
-			$.ajax({
-				type: "POST",
-				url: "http://localhost:8000/dbscan",
-				data: JSON.stringify({ 'features': x, 'dist': document.getElementById("DBScanInput").value }),
-				success: function (data) {
-					data = JSON.parse(data);
-					data2 = [];
-					for (let key = 0; key < x.length; key++) {
-						data2[key] = {};
-						data2[key]['geometry'] = data['geometry'][key];
-						data2[key]['type'] = data['type'][key];
-						data2[key]['properties'] = data['properties'][key];
-						//console.log(dataCrimes);
-					}
-					dataCrimes['features'] = data2;
-					map.getSource('dataCrimes').setData(dataCrimes);
-					timeseries = findDBScanCluster(DBSCANdistance, x);
-					timeseriesToPredict = timeseries;
-					console.log("DBSCANNED " + timeseries);
+		// if (method === 'DBSCAN'){
+// 		x = updateFilteredPoints(crimeType, dateCommitted, timeCommitted)
+// 		$.ajax({
+// 			type: "POST",
+// 			url: "http://localhost:8000/dbscan",
+// 			data: JSON.stringify({ 'features': x, 'dist': document.getElementById("DBScanInput").value }),
+// 			success: function (data) {
+// 				data = JSON.parse(data);
+// 				data2 = [];
+// 				for (let key = 0; key < x.length; key++) {
+// 					data2[key] = {};
+// 					data2[key]['geometry'] = data['geometry'][key];
+// 					data2[key]['type'] = data['type'][key];
+// 					data2[key]['properties'] = data['properties'][key];
+// 					//console.log(dataCrimes);
+// 				}
+// 				dataCrimes['features'] = data2;
+// 				map.getSource('dataCrimes').setData(dataCrimes);
+// 				timeseries = findDBScanCluster(DBSCANdistance, x);
+// 				timeseriesToPredict = timeseries;
+// 				console.log("DBSCANNED " + timeseries);
 
-					//console.log(data2);
-					//console.log(dataCrimes);
-				}
-			});
-			return
-		}
+// 				//console.log(data2);
+// 				//console.log(dataCrimes);
+// 			}
+// 		});
+		// 	return
+		// }
+
+		$('.cluster-button')[0].classList.add('loading');
+		$('.cluster-button')[0].classList.add('loading-lrg');
 		const grid_x = document.getElementById("grid-x").value;
 		const grid_y = document.getElementById("grid-y").value;
 		const threshold = document.getElementById("threshold").value;
@@ -717,6 +720,8 @@ function clusterButtonHookUp(map, dateCommitted, timeCommitted, crimeType){
 			url: "http://localhost:8000/crimePred/heterogeneous-cluster",
 			data: JSON.stringify({ 'features': dataCrimes, 'gridShape': "(" + grid_x + "," + grid_y + ")", 'threshold': threshold }),
 			success: function (data) {
+				$('.cluster-button')[0].classList.add('loading');
+				$('.cluster-button')[0].classList.add('loading-lrg');
 				data = JSON.parse(data);
 				addClusterLayersFromBoundaries(data, map);
 			}
@@ -726,8 +731,10 @@ function clusterButtonHookUp(map, dateCommitted, timeCommitted, crimeType){
 
 function predictButtonHookUp(){
 	$(".predict-button")[0].classList.remove('disabled');
-
+	
 	$('.predict-button').click(function () {
+	$('.predict-button')[0].classList.add('loading');
+	$('.predict-button')[0].classList.add('loading-lrg');
 		$.ajax({
 			type: "POST",
 			url: "http://localhost:8000/crimePred/cluster-predict",
@@ -738,9 +745,12 @@ function predictButtonHookUp(){
 				'grid-x': $('#grid-x').val(),
 				'grid-y': $('#grid-y').val(),
 				'threshold': $('#threshold').val(),
-				'metricPrecision': $('#metric-precision').val()
+				'metricPrecision': $('#metric-precision').val(),
+				'metricMax': $('#metric-max').val()
 			}),
 			success: function (imageData) {
+				$('.predict-button')[0].classList.remove('loading');
+				$('.predict-button')[0].classList.remove('loading-lrg');
 				$('.empty')[0].remove()
 				$('.result img')[0].src=`data:image/png;base64, ${imageData}`
 				$('.result img')[0].classList.remove('d-none')
