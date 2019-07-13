@@ -197,7 +197,7 @@ function mouseOnPointsEvent(map, popup) {
 
 		// Populate the popup and set its coordinates
 		// based on the feature found.
-		popup.setLngLat([e.features[0].properties[2], e.features[0].properties[1]])
+		popup.setLngLat([e.features[0].properties['Longitude'], e.features[0].properties['Latitude']])
 			.setHTML(description)
 			.addTo(map);
 	});
@@ -245,175 +245,131 @@ function addClusterLayer(map, id, points, color) {
 	});
 }
 
+function applyFilters(map){
+	map.setFilter('crimes', undefined);
+	let ctCommittedArray = new Array();
+	let timeCommittedArray = new Array();
+	let dateCommittedArray = new Array();
+	ctCommittedArray.push('in');
+	ctCommittedArray.push('Category');
+	timeCommittedArray.push('in');
+	timeCommittedArray.push('Time');
+	dateCommittedArray.push('in');
+	dateCommittedArray.push('Date');
+	ctCommitted.forEach((v)=>{ctCommittedArray.push(v)});
+	timeCommitted.forEach((v)=>{timeCommittedArray.push(v)});
+	dateCommitted.forEach((v)=>{dateCommittedArray.push(v)});
+	map.setFilter('crimes', ['all', ctCommittedArray, timeCommittedArray, dateCommittedArray]);
+}
+
 function changeFunctionsHookUp(map) {
 	$(".change").change(function () {
-			if ($(this).prop("name").slice(0, 3) == "day") {
-				if ($(this).prop("name").slice(4) == "ALL") {
-					if (!$(this).prop('checked')) return;
-					dates.forEach(function (value) {
-						dateCommitted.add(value);
-					});
-					$("#dates input:checkbox").prop('checked', true);
-					$("#dates input:checkbox[name='day-NONE']").prop('checked', false);
-				}
-				else if ($(this).prop("name").slice(4) == "NONE") {
-					if (!$(this).prop('checked')) return;
-					dateCommitted.clear();
-					$("#dates input:checkbox").prop('checked', false);
-					$("#dates input:checkbox[name='day-NONE']").prop('checked', true);
-				}
-				else {
-					const daysNumDict = {'Mondays': 1, 'Tuesdays': 2, 'Wednesdays': 3, 'Thursday': 4, 'Fridays': 5, 'Saturday': 6, 'Sundays': 0};
-					const dayString = $(this).prop("name").slice(4)
-					dates.forEach(function (value) {
-						let curDate = new Date(value);
-						if (curDate.getDay() === daysNumDict[dayString]) {
-							if (!$(this).prop('checked')){
-								dateCommitted.delete(value);
-							} 
-							else{
-								dateCommitted.add(value);
-							}
+		const opType = $(this).prop('name').slice(0,3);
+		const timeValue = $(this).prop('name').slice(4);
+		const typeValue=$(this).prop('name').slice(10);
+		const isChecked = $(this).prop('checked');
+		if (opType === "day") {
+			if (timeValue === "ALL") {
+				if (!isChecked) return;
+				dates.forEach(function (value) {
+					dateCommitted.add(value);
+				});
+				$("#dates input:checkbox").prop('checked', true);
+				$("#dates input:checkbox[name='day-NONE']").prop('checked', false);
+			}
+			else if (timeValue === "NONE") {
+				if (!isChecked) return;
+				dateCommitted.clear();
+				$("#dates input:checkbox").prop('checked', false);
+				$("#dates input:checkbox[name='day-NONE']").prop('checked', true);
+			}
+			else {
+				const daysNumDict = {'Mondays': 1, 'Tuesdays': 2, 'Wednesdays': 3, 'Thursdays': 4, 'Fridays': 5, 'Saturdays': 6, 'Sundays': 0};
+				const dayString = timeValue;
+
+				dates.forEach(function (value) {
+					let curDate = new Date(value);
+					if (curDate.getDay() === daysNumDict[dayString]) {
+						if (!isChecked){
+							dateCommitted.delete(value);
+						} 
+						else{
+							dateCommitted.add(value);
 						}
-					});
+					}
+				});
+			}
+		}
+		else if (opType === "tod") {
+			if (timeValue === "ALL") {
+				if (!isChecked) return;
+				times.forEach(function (value) {
+					timeCommitted.add(value);
+				}); 
+				$("#timeOfDay input:checkbox").prop('checked', true);
+				$("#timeOfDay input:checkbox[name='tod-NONE']").prop('checked', false);
+			}
+			else if (timeValue === "NONE") {
+				if (!isChecked) return;
+				timeCommitted.clear();
+				$("#timeOfDay input:checkbox").prop('checked', false);
+				$("#timeOfDay input:checkbox[name='tod-None']").prop('checked', true);
+			}
+			else {
+				const todDict = {'Morning': [5, 10], 'Noon': [11, 14], 'Afternoon': [15, 18], 'Evening': [19, 23], 'Night': [0, 4]};
+				let hour; 
+				times.forEach(function (value) {
+					hour = parseInt(value.split(':')[0]);
+					if (hour >= todDict[timeValue][0] && hour <= todDict[timeValue][1]){
+						if (!isChecked){
+							timeCommitted.delete(value);
+						}
+						else{
+							timeCommitted.add(value);
+						}
+					} 
+				});
+				if (!isChecked){
+					$("#timeOfDay input:checkbox[name='tod-ALL']").prop('checked', false);
+				}
+				else{
+					$("#timeOfDay input:checkbox[name='tod-None']").prop('checked', false);
 				}
 			}
-			else if ($(this).prop("name").slice(0, 3) == "tod") {
-				if ($(this).prop("name").slice(4) == "ALL") {
-					if (!$(this).prop('checked')) return;
-					times.forEach(function (value) {
-						timeCommitted.add(value);
-					}); 
-					$("#timeOfDay input:checkbox").prop('checked', true);
-					$("#timeOfDay input:checkbox[name='tod-NONE']").prop('checked', false);
+		}
+		else if ($(this).prop("name").slice(0, 9) === "crimeType") {
+			if (typeValue === "ALL") {
+				if (!isChecked) return;
+				ct.forEach(function (value) {
+					ctCommitted.add(value);
+				});
+				$("#crimeType input:checkbox").prop('checked', true);
+				$("#crimeType input:checkbox[name='crimeType-NONE']").prop('checked', false);
+			}
+			else if (typeValue === "NONE") {
+				if (!isChecked) return;
+				ctCommitted.clear();
+				$("#crimeType input:checkbox").prop('checked', false);
+				$("#crimeType input:checkbox[name='crimeType-NONE']").prop('checked', true);
+			}				
+			else {
+				if (!isChecked){
+					ctCommitted.delete(typeValue);
+					$("#crimeType input[name='crimeType-ALL']:checkbox").prop('checked', false);
 				}
-				else if ($(this).prop("name").slice(4) == "NONE") {
-					if (!$(this).prop('checked')) return;
-					timeCommitted.clear();
-					$("#timeOfDay input:checkbox").prop('checked', false);
-					$("#timeOfDay input:checkbox[name='tod-None']").prop('checked', true);
+				else{
+					ctCommitted.add(typeValue);
+					$("#crimeType input[name='crimeType-NONE']:checkbox").prop('checked', false);
 				}
-				else {
-					if ($(this).prop("name").slice(4) == "Morning") {
-						times.forEach(function (value) {
-							let curTime = new Date(value);
-							if (curTime.getHours() >= 5 && curTime.getHours() <= 10){
-								if (!$(this).prop('checked')){
-									timeCommitteddateCommitted.delete(value);
-								}
-								else{
-									timeCommitted.add(value);
-								}
-							} 
-						});
-					}
-					if ($(this).prop("name").slice(4) == "Noon") {
-						times.forEach(function (value) {
-							let curTime = new Date(value);
-							if (curTime.getHours() >= 11 && curTime.getHours() <= 14){
-								if (!$(this).prop('checked')){
-									timeCommitteddateCommitted.delete(value);
-								}
-								else{
-									timeCommitted.add(value);
-								}
-							} 
-						});
-					}
-					if ($(this).prop("name").slice(4) == "Afternoon") {
-						times.forEach(function (value) {
-							let curTime = new Date(value);
-							if (curTime.getHours() >= 15 && curTime.getHours() <= 18){
-								if (!$(this).prop('checked')){
-									timeCommitteddateCommitted.delete(value);
-								}
-								else{
-									timeCommitted.add(value);
-								}
-							} 
-						});
-					}
-					if ($(this).prop("name").slice(4) == "Evening") {
-						times.forEach(function (value) {
-							let curTime = new Date(value);
-							if (curTime.getHours() >= 19 && curTime.getHours() <= 23){
-								if (!$(this).prop('checked')){
-									timeCommitteddateCommitted.delete(value);
-								}
-								else{
-									timeCommitted.add(value);
-								}
-							} 
-						});
-					}
-					if ($(this).prop("name").slice(4) == "Night") {
-						times.forEach(function (value) {
-							let curTime = new Date(value);
-							if (curTime.getHours() >= 0 && curTime.getHours() <= 4){
-								if (!$(this).prop('checked')){
-									timeCommitteddateCommitted.delete(value);
-								}
-								else{
-									timeCommitted.add(value);
-								}
-							} 
-						});
-					}
-					if (!$(this).prop('checked')){
-						$("#timeOfDay input:checkbox[name='tod-ALL']").prop('checked', false);
-					}
-					else{
-						$("#timeOfDay input:checkbox[name='tod-None']").prop('checked', false);
-					}
+				if (!isChecked){
+					$("#crimeType input:checkbox[name='crimeType-ALL']").prop('checked', false);
+				}
+				else{
+					$("#crimeType input:checkbox[name='crimeType-None']").prop('checked', false);
 				}
 			}
-			else if ($(this).prop("name").slice(0, 9) == "crimeType") {
-				if ($(this).prop("name").slice(10) == "ALL") {
-					if (!$(this).prop('checked')) return;
-					ct.forEach(function (value) {
-						ctCommitted.add(value);
-					});
-					$("#crimeType input:checkbox").prop('checked', true);
-					$("#crimeType input:checkbox[name='crimeType-NONE']").prop('checked', false);
-				}
-				else if ($(this).prop("name").slice(4) == "NONE") {
-					if (!$(this).prop('checked')) return;
-					ctCommitted.clear();
-					$("#crimeType input:checkbox").prop('checked', false);
-					$("#crimeType input:checkbox[name='crimeType-NONE']").prop('checked', true);
-				}				
-				else {
-					if (!$(this).prop('checked')){
-						ctCommitted.delete($(this).prop("name").slice(10));
-						$("#crimeType input[name='crimeType-ALL']:checkbox").prop('checked', false);
-					}
-					else{
-						ctCommitted.add($(this).prop("name").slice(10));
-						$("#crimeType input[name='crimeType-NONE']:checkbox").prop('checked', false);
-					}
-					if (!$(this).prop('checked')){
-						$("#crimeType input:checkbox[name='crimeType-ALL']").prop('checked', false);
-					}
-					else{
-						$("#crimeType input:checkbox[name='crimeType-None']").prop('checked', false);
-					}
-				}
-			}
-		let ctCommittedArray = new Array();
-		let timeCommittedArray = new Array();
-		let dateCommittedArray = new Array();
-		ctCommittedArray.push('in');
-		ctCommittedArray.push('Category');
-		timeCommittedArray.push('in');
-		timeCommittedArray.push('Time');
-		dateCommittedArray.push('in');
-		dateCommittedArray.push('Date');
-		ctCommitted.forEach((v)=>{ctCommittedArray.push(v)});
-		timeCommitted.forEach((v)=>{timeCommittedArray.push(v)});
-		dateCommitted.forEach((v)=>{dateCommittedArray.push(v)});
-		map.setFilter('crimes', ctCommittedArray);
-		map.setFilter('crimes', timeCommittedArray);
-		map.setFilter('crimes', dateCommittedArray);
+		}
+		applyFilters(map);
 	});
 }
 
@@ -429,18 +385,13 @@ function submitFunctionHookUp(map) {
 				dateCommitted.add(v);
 			}
 		})
-		let dateCommittedArray = new Array();
-		dateCommittedArray.push('in');
-		dateCommittedArray.push('Date');
-		dateCommitted.forEach((v)=>{dateCommittedArray.push(v)});
-		map.setFilter('crimes', dateCommittedArray);
+		applyFilters(map);			
 	});
 }
 
 function addClusterLayersFromBoundaries(data, map){
     for (let i = 0; i < data[0].length; ++i) {
         let points = data[0][i]
-        // console.log(points)
         let clusterID = "cluster" + i;
         if (data[0][i].length >= 7) {
             let path_idx = new Map();
@@ -563,21 +514,39 @@ function predictButtonHookUp(){
 	});
 }
 
-function formatDataToMatbox(){
-	let matbox = {
+function formatDataToMapbox(){
+	let mapbox = {
 		"type": "FeatureCollection",
 		"name": "dps",
 		"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" }},
 		"features": []
 	}
 	for (let i = 0; i < dataCrimes.length; ++i){
-		matbox['features'].push({
+		mapbox['features'].push({
 			"type": "Feature", 
 			"properties": dataCrimes[i], 
 			"geometry": { "type": "Point", "coordinates": [dataCrimes[i]['Longitude'], dataCrimes[i]['Latitude']] }
 		})
 	}
-	return matbox;
+	return mapbox;
+}
+ 
+function addAllCrimePoints(map){
+	//MAP LAYER: ALL CRIMES
+	map.addLayer({ 
+		"id": "crimes",  
+		"type": "circle",
+		"source": "dataCrimes",
+		"paint": {
+			"circle-radius": {
+				"base": 3.25,
+				"stops": [[12, 3.5], [22, 180]]
+			},
+			"circle-color": colorArr,
+			"circle-stroke-width": 1,
+			"circle-stroke-color": "#ffffff"
+		}
+	});
 }
 
 function loadmap() {
@@ -604,35 +573,18 @@ function loadmap() {
 	let DBSCANdistance = "0cluster";
 	colorArr = colors(DBSCANdistance);
 
-	matboxData = formatDataToMatbox();
-	console.log(matboxData);
+	mapboxData = formatDataToMapbox();
+	console.log(mapboxData);
 	map.on('load', function () {
 		map.addSource("dataCrimes", {
 			"type": "geojson",
-			"data": matboxData
+			"data": mapboxData
 		});
-
-		//MAP LAYER: ALL CRIMES
-		map.addLayer({
-			"id": "crimes",
-			"type": "circle",
-			"source": "dataCrimes",
-			"paint": {
-				"circle-radius": {
-					"base": 3.25,
-					"stops": [[12, 3.5], [22, 180]]
-				},
-				"circle-color": colorArr,
-				"circle-stroke-width": 1,
-				"circle-stroke-color": "#ffffff"
-			}
-		});
-
+		addAllCrimePoints(map);
 		let popup = new mapboxgl.Popup({
 			closeButton: false,
 			closeOnClick: false
 		});
-
 		mouseOnPointsEvent(map, popup);
 		map.setFilter("crimes", ["all"])
 	});
@@ -655,7 +607,6 @@ function handleFileSelect(evt) {
 				dataCrimes = e.target.result;
 				try {
 					dataCrimes = JSON.parse(dataCrimes);
-					console.log(dataCrimes);
 				} catch (ex) {
 					alert('ex when trying to parse json = ' + ex);
 				}

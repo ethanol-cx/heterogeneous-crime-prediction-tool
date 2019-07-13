@@ -1,5 +1,6 @@
-djmaps/result/*
-djmaps/result
+**/results
+**/bin
+djmaps/maps/templates/DPSUSC.pkl
 
 # Annoying tilde backup files
 *~
