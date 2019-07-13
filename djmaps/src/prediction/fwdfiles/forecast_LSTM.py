@@ -60,7 +60,6 @@ def forecast_LSTM(clusters, realCrimes, periodsAhead_list, gridshape, ignoreFirs
     look_back = 3
     batch_size = 1
     model = load_LSTM_model(look_back, batch_size)
-    test_predict_index = None
     for c in clusters.Cluster.values:
         print("Predicting cluster {} with threshold {} using LSTM".format(
             c, threshold))

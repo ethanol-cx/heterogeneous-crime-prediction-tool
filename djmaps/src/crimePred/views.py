@@ -279,7 +279,7 @@ def clusterAndPredict(request):
     # plt.close()
     print('Done saving')
 
-    subprocess.run(['python3', os.path.abspath('plotResult.py'), file_path, image_path])
+    subprocess.run(['python3', os.path.abspath('djmaps/plotResult.py'), file_path, image_path])
     with open(image_path, "rb") as imageFile:
         image_data = base64.b64encode(imageFile.read())
     print('Got Image Data')

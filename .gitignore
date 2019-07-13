@@ -1,3 +1,6 @@
+djmaps/result/*
+djmaps/result
+
 # Annoying tilde backup files
 *~
 .idea
