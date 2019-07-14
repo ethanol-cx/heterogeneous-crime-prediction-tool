@@ -97,7 +97,7 @@ def saveParameters(orders, seasonal_orders, method,
     output = open(fileName, 'wb')
     pickle.dump((orders, seasonal_orders), output)
     output.close()
-    return
+    return fileName
 
 
 def getAreaFromLatLon(lon1, lon2, lat1, lat2):
@@ -133,6 +133,11 @@ def compute_resource_allocation(resource_indexes, cell_coverage_units, gridshape
                     file = os.path.abspath("results/{}/{}_predictions_grid({},{})_ignore({})_ahead({})_threshold({})_dist({}).pkl".format(
                         method, method, gridshape[0], gridshape[1], ignoreFirst, periodsAhead, threshold, dist))
                     clusters, realCrimes, forecasts = pd.read_pickle(file)
+                    
+                    # this step is added specifically for the django prediction tool
+                    # periodsAhead_list contains only one element in the app
+                    forecasts = forecasts[: - periodsAhead_list[0]]
+                    
                     unit_area = getAreaFromLatLon(
                         lon1=lon_min, lon2=lon_max, lat1=lat_min, lat2=lat_max) / (gridshape[0] * gridshape[1])
                     scores = fixResourceAvailable(resource_indexes, forecasts, realCrimes, clusters, cell_coverage_units, unit_area).rename(

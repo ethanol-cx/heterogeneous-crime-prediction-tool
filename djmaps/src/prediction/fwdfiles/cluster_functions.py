@@ -9,13 +9,11 @@ def add_ElapsedWeeks(data, inplace=False):
     if not inplace:
         data = data.copy()
     data.Date = [pd.to_datetime(
-        x, format='%m/%d/%Y', errors='ignore') for x in data.Date]
+        x, format='%m/%d/%y') for x in data.Date]
     minDate = data.Date.min()
     # start the week on Monday
     minDate = (minDate - timedelta(days=minDate.weekday()))
-
     data['ElapsedWeeks'] = (data.Date-minDate).apply(lambda f: f.days // 7)
-
     return data
 
 

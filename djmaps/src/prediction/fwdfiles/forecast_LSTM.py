@@ -56,11 +56,15 @@ def forecast_LSTM(clusters, realCrimes, periodsAhead_list, gridshape, ignoreFirs
     periodsAhead_cntr = -1
     test_size = len(realCrimes) // 3
     forecasted_data = np.zeros(
-        (len(periodsAhead_list), cluster_size, test_size))
+        (len(periodsAhead_list), cluster_size, test_size + periodsAhead_list[0]))
     look_back = 3
     batch_size = 1
     model = load_LSTM_model(look_back, batch_size)
     for c in clusters.Cluster.values:
+        # this step is added specifically for the django prediction tool
+        # periodsAhead_list contains only one element in the app
+        test_size = len(realCrimes) // 3
+ 
         print("Predicting cluster {} with threshold {} using LSTM".format(
             c, threshold))
         cluster_cntr += 1
@@ -94,6 +98,10 @@ def forecast_LSTM(clusters, realCrimes, periodsAhead_list, gridshape, ignoreFirs
         trainPredict = scaler.inverse_transform(trainPredict)
         y_train = scaler.inverse_transform(y_train)
         y_test = scaler.inverse_transform(y_test)
+
+        # this step is added specifically for the django prediction tool
+        # periodsAhead_list contains only one element in the app
+        test_size += periodsAhead_list[0]
 
         # for each predict horizon - `periodsAhead`, we perform recursive multi-step timeseries prediction with different timesteps ahead
         # Note: the the `start` and the `end` defines the window and splits the observation and the "y_test"
@@ -133,5 +141,6 @@ def forecast_LSTM(clusters, realCrimes, periodsAhead_list, gridshape, ignoreFirs
         periodsAhead = periodsAhead_list[i]
         forecasts = pd.DataFrame(data=forecasted_data[i].T, columns=['C{}_Forecast'.format(c)
                                                                      for c in clusters.Cluster.values])
-        savePredictions(clusters, realCrimes, forecasts, 'LSTM',
+        return savePredictions(clusters, realCrimes, forecasts, 'LSTM',
                         gridshape, ignoreFirst, periodsAhead, threshold, maxDist)
+ 

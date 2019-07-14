@@ -9,9 +9,14 @@ import json
 from ast import literal_eval
 import datetime
 import pandas as pd
-import pickle 
+import pickle
 import subprocess
 import base64
+
+lon_min = -118.297
+lon_max = -118.27
+lat_min = 34.015
+lat_max = 34.038
 
 # get the parent directory
 current_path = os.path.abspath(getsourcefile(lambda: 0))
@@ -22,13 +27,13 @@ parent_dir = current_dir[:current_dir.rfind(os.path.sep)]
 sys.path.insert(0, parent_dir)
 
 # import the packages from the parent directory
-from prediction.fwdfiles.cluster_functions import computeClustersAndOrganizeData
-from prediction.fwdfiles.general_functions import getBorderCordinates, compute_resource_allocation
-from prediction.fwdfiles.forecast_MM import forecast_MM
-from prediction.fwdfiles.forecast_ARIMA import forecast_ARIMA
 from prediction.fwdfiles.forecast_LSTM import forecast_LSTM, load_LSTM_model
- 
- # reset the sys.path
+from prediction.fwdfiles.forecast_ARIMA import forecast_ARIMA
+from prediction.fwdfiles.forecast_MM import forecast_MM
+from prediction.fwdfiles.general_functions import getBorderCordinates, compute_resource_allocation
+from prediction.fwdfiles.cluster_functions import computeClustersAndOrganizeData
+
+# reset the sys.path
 sys.path.pop(0)
 
 
@@ -88,12 +93,10 @@ def fleuryEulerianCircuit(neighbor_map, u, node_path):
 def index(request):
     return HttpResponse('This is the crimePred index.')
 
+
 def convertFromFeaturesToData(features):
-    lon_min = -118.297
-    lon_max = -118.27
-    lat_min = 34.015
-    lat_max = 34.038
-    data = pd.DataFrame(features, columns=['Category', 'Latitude', 'Longitude', 'Date'])
+    data = pd.DataFrame(features, columns=[
+                        'Category', 'Latitude', 'Longitude', 'Date'])
     print(data.head)
     print("Minimum latitude: %f" % min(data["Latitude"]))
     print("Maximum latitude: %f" % max(data["Latitude"]))
@@ -108,20 +111,14 @@ def convertFromFeaturesToData(features):
     data = data.reset_index(drop=True)
     return data
 
-def heterogeneousCluster(request):
-    lon_min = -118.297
-    lon_max = -118.27
-    lat_min = 34.015
-    lat_max = 34.038
 
-    print("CLUSTERING")
+def heterogeneousCluster(request):
     pd.options.display.precision = 10
     body_unicode = request.body.decode('utf-8')
     body = json.loads(body_unicode)
     features = body['features']
     threshold = int(body['threshold'])
     gridshape = literal_eval(body['gridShape'])
-    entries = []
     data = convertFromFeaturesToData(features)
     ignoreFirst = 225
     clusters, realCrimes = computeClustersAndOrganizeData(
@@ -155,8 +152,7 @@ def heterogeneousCluster(request):
         print(node_path)
         border_result.append(node_path)
         crime_counts.append(num_of_crimes)
-        num_of_crimes = 0
-    resp = HttpResponse(pd.io.json.dumps([border_result, crime_counts]))
+    resp = HttpResponse(pd.io.json.dumps([border_result, crime_counts, clusters, realCrimes]))
     resp['Access-Control-Allow-Origin'] = '*'
     return resp
 
@@ -166,18 +162,9 @@ def cluster(request, dataset, gridshape, threshold):
         data = pd.read_pickle(os.path.abspath(
             './prediction/dataset/DPSUSC.pkl'))
         ignoreFirst = 225
-        lon_min = -118.301895
-        lon_max = -118.27
-        lat_min = 34.015
-        lat_max = 34.0366
-        print(data)
     elif dataset == 'la':
         data = pd.read_pickle(os.path.abspath(
             './prediction/dataset/LAdata.pkl'))
-        lon_min = -118.301895
-        lon_max = -118.27
-        lat_min = 34.015
-        lat_max = 34.0366
         ignoreFirst = 104
     else:
         response = HttpResponse(
@@ -222,68 +209,63 @@ def cluster(request, dataset, gridshape, threshold):
         response['Access-Control-Allow-Origin'] = '*'
         return response
 
-def clusterAndPredict(request):
-    lon_min = -118.297
-    lon_max = -118.27
-    lat_min = 34.015
-    lat_max = 34.038
 
+def clusterAndPredict(request):
     body_unicode = request.body.decode('utf-8')
     body = json.loads(body_unicode)
     data = convertFromFeaturesToData(body['features'])
     gridshape = tuple((int(body['grid-x']), int(body['grid-y'])))
-    print('gridshape {}'.format(gridshape))
     method = body['method']
     threshold = int(body['threshold'])
     metricPrecision = int(body['metricPrecision'])
     metricMax = int(body['metricMax'])
     maxDist = 1
     ignoreFirst = 225
-    periodsAhead_list = [int(body['periodsAhead'])] 
+    periodsAhead_list = [int(body['periodsAhead'])]
+    # clusters = body['clusters']
+    # realCrimes = body['realCrimes']
 
-    # Compute the cluster/grid distribution based on the threshold.
-    print('Computing clusters ...')
+    # if not clusters:
+    if True: #temprorary solution
+        # Compute the cluster/grid distribution based on the threshold.
+        print('Computing clusters ...')
 
-    # In grid_prediction, which predict the crimes without clustering, the threshold is set to 0
-    # `clusters` is the cluster distributions
-    clusters, realCrimes = computeClustersAndOrganizeData(
-        data, gridshape, ignoreFirst, threshold, maxDist)
+        # In grid_prediction, which predict the crimes without clustering, the threshold is set to 0
+        # `clusters` is the cluster distributions
+        clusters, realCrimes = computeClustersAndOrganizeData(
+            data, gridshape, ignoreFirst, threshold, maxDist)
 
-    print('Number of clusters: {}'.format(len(clusters)))
-    print('Computing predictions ...')
+        print('Number of clusters: {}'.format(len(clusters)))
+        print('Computing predictions ...')
 
-    result = ''
     if method == "LSTM":
-        forecast_LSTM(clusters=clusters, realCrimes=realCrimes,
-                          periodsAhead_list=periodsAhead_list, gridshape=gridshape, ignoreFirst=ignoreFirst, threshold=threshold, maxDist=maxDist)
+        result_path = forecast_LSTM(clusters=clusters, realCrimes=realCrimes,
+                      periodsAhead_list=periodsAhead_list, gridshape=gridshape, ignoreFirst=ignoreFirst, threshold=threshold, maxDist=maxDist)
     elif method == "ARIMA" or method == "AR":
-        forecast_ARIMA(method=method, clusters=clusters, realCrimes=realCrimes,
-                           periodsAhead_list=periodsAhead_list, gridshape=gridshape, ignoreFirst=ignoreFirst, threshold=threshold, maxDist=maxDist, orders=[], seasonal_orders=[])
+        result_path = forecast_ARIMA(method=method, clusters=clusters, realCrimes=realCrimes,
+                       periodsAhead_list=periodsAhead_list, gridshape=gridshape, ignoreFirst=ignoreFirst, threshold=threshold, maxDist=maxDist)
     else:
-        forecast_MM(method=method, clusters=clusters, realCrimes=realCrimes,
-                        periodsAhead_list=periodsAhead_list, gridshape=gridshape, ignoreFirst=ignoreFirst, threshold=threshold, maxDist=maxDist)
-
+        result_path = forecast_MM(method=method, clusters=clusters, realCrimes=realCrimes,
+                    periodsAhead_list=periodsAhead_list, gridshape=gridshape, ignoreFirst=ignoreFirst, threshold=threshold, maxDist=maxDist)
+    
+    clusters, _, forecasts = pd.read_pickle(result_path)
+    crimesPredictedPerCluster = [sum(forecasts[columnName][-periodsAhead_list[0]:]) for columnName in forecasts]
     resource_indexes = range(0, metricMax, metricPrecision)
-    file_path = compute_resource_allocation(resource_indexes, 1, [gridshape], periodsAhead_list, ignoreFirst, [threshold], 1, [method], lon_min, lon_max, lat_min, lat_max)
+    file_path = compute_resource_allocation(resource_indexes, 1, [gridshape], periodsAhead_list, ignoreFirst, [
+                                            threshold], 1, [method], lon_min, lon_max, lat_min, lat_max)
 
-    filename = "{}_{}_({}x{})({})_{}_ahead.png".format('LA' if ignoreFirst == 104 else 'USC', method, gridshape[0], gridshape[1], threshold, periodsAhead_list[0])
+    filename = "{}_{}_({}x{})({})_{}_ahead.png".format('LA' if ignoreFirst == 104 else 'USC',
+                                                       method, gridshape[0], gridshape[1], threshold, periodsAhead_list[0])
     os.makedirs(os.path.abspath("results/"), exist_ok=True)
     os.makedirs(os.path.abspath(
-            "results/plot"), exist_ok=True)
+        "results/plot"), exist_ok=True)
     image_path = os.path.abspath('results/plot/{}').format(filename)
 
-    # result = pd.read_pickle(file_path)
-    # plt.plot(result)
-    # # plt.legend()
-    # plt.savefig(image_path)
-    # plt.close()
-    print('Done saving')
-
-    subprocess.run(['python3', os.path.abspath('djmaps/plotResult.py'), file_path, image_path])
+    subprocess.run(['python3', os.path.abspath(
+        'djmaps/plotResult.py'), file_path, image_path])
     with open(image_path, "rb") as imageFile:
         image_data = base64.b64encode(imageFile.read())
-    print('Got Image Data')
-    response = HttpResponse(image_data)
+    response = HttpResponse(pd.io.json.dumps([crimesPredictedPerCluster, image_data]))
     response['Access-Control-Allow-Origin'] = '*'
     response.status_code = 200
     return response

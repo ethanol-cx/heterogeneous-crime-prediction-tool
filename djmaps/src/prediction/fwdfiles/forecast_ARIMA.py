@@ -9,7 +9,7 @@ from inspect import getsourcefile
 from .general_functions import savePredictions, saveParameters, getIfParametersExists
 # Compute predictions using Seasonal Moving Average Model
 
-def forecast_ARIMA(method, clusters, realCrimes, periodsAhead_list, gridshape, ignoreFirst, threshold, maxDist, orders=[], seasonal_orders=[]):
+def forecast_ARIMA(method, clusters, realCrimes, periodsAhead_list, gridshape, ignoreFirst, threshold, maxDist):
     assert method in ['MA', 'AR', 'ARIMA']
     print("Starting Predictions_{}".format(method))
     cluster_size = len(clusters.Cluster.values)
@@ -17,8 +17,12 @@ def forecast_ARIMA(method, clusters, realCrimes, periodsAhead_list, gridshape, i
     periodsAhead_cntr = -1
     test_size = len(realCrimes) // 3
     forecasted_data = np.zeros(
-        (len(periodsAhead_list), cluster_size, test_size))
+        (len(periodsAhead_list), cluster_size, test_size + periodsAhead_list[0]))
     for c in clusters.Cluster.values:
+        # this step is added specifically for the django prediction tool
+        # periodsAhead_list contains only one element in the app
+        test_size = len(realCrimes) // 3
+        
         print("Predicting cluster {} with threshold {} using {}".format(
             c, threshold, method))
         cluster_cntr += 1
@@ -76,6 +80,10 @@ def forecast_ARIMA(method, clusters, realCrimes, periodsAhead_list, gridshape, i
                     endog=df, order=stepwise_model.order, enforce_stationarity=False, enforce_invertibility=False, hamilton_representation=False)
         coef_results = pred_model.fit(disp=0)
 
+        # this step is added specifically for the django prediction tool
+        # periodsAhead_list contains only one element in the app
+        test_size += periodsAhead_list[0]
+
         # for each predict horizon - `periodsAhead`, we perform rolling time series prediction with different window sizes
         # Note: the the `start` and the `end` defines the window and splits the observation and the "y_test"
         for periodsAhead in periodsAhead_list:
@@ -103,5 +111,5 @@ def forecast_ARIMA(method, clusters, realCrimes, periodsAhead_list, gridshape, i
         forecasts = pd.DataFrame(data=forecasted_data[i].T, columns=['C{}_Forecast'.format(c)
                                                                      for c in clusters.Cluster.values])
         forecasts.index = df[-test_size:].index
-        savePredictions(clusters, realCrimes, forecasts, method,
+        return savePredictions(clusters, realCrimes, forecasts, method,
                         gridshape, ignoreFirst, periodsAhead, threshold, maxDist)
