@@ -48,7 +48,7 @@ def load_LSTM_model(look_back, batch_size):
     return model
 
 
-def forecast_LSTM(clusters, realCrimes, periodsAhead_list, gridshape, ignoreFirst, threshold, maxDist):
+def forecast_LSTM(clusters, realCrimes, periodsAhead_list, gridshape, ignoreFirst, threshold, maxDist, isRetraining):
     np.random.seed(23)
     scaler = MinMaxScaler(feature_range=(0, 1))
     cluster_size = len(clusters.Cluster.values)
@@ -79,7 +79,7 @@ def forecast_LSTM(clusters, realCrimes, periodsAhead_list, gridshape, ignoreFirs
         X_test = X[-test_size:]
         file_path = "parameters/{}/{}_parameters_grid({},{})_cluster({})_ignore({})_threshold({})_dist({}).h5".format(
             'LSTM', 'LSTM', *gridshape, c, ignoreFirst, threshold, maxDist)
-        if Path(file_path).is_file():
+        if not isRetraining and Path(file_path).is_file():
             print("Loading existing weights ...")
             model.load_weights(file_path)
         else:

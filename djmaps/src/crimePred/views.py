@@ -152,7 +152,8 @@ def heterogeneousCluster(request):
         print(node_path)
         border_result.append(node_path)
         crime_counts.append(num_of_crimes)
-    resp = HttpResponse(pd.io.json.dumps([border_result, crime_counts, clusters, realCrimes]))
+    resp = HttpResponse(pd.io.json.dumps(
+        [border_result, crime_counts, clusters, realCrimes]))
     resp['Access-Control-Allow-Origin'] = '*'
     return resp
 
@@ -222,11 +223,12 @@ def clusterAndPredict(request):
     maxDist = 1
     ignoreFirst = 225
     periodsAhead_list = [int(body['periodsAhead'])]
+    isRetrainingModel = bool(body['retrain-model-checkbox'])
     # clusters = body['clusters']
     # realCrimes = body['realCrimes']
 
     # if not clusters:
-    if True: #temprorary solution
+    if True:  # temprorary solution
         # Compute the cluster/grid distribution based on the threshold.
         print('Computing clusters ...')
 
@@ -240,16 +242,17 @@ def clusterAndPredict(request):
 
     if method == "LSTM":
         result_path = forecast_LSTM(clusters=clusters, realCrimes=realCrimes,
-                      periodsAhead_list=periodsAhead_list, gridshape=gridshape, ignoreFirst=ignoreFirst, threshold=threshold, maxDist=maxDist)
+                                    periodsAhead_list=periodsAhead_list, gridshape=gridshape, ignoreFirst=ignoreFirst, threshold=threshold, maxDist=maxDist, isRetraining=isRetrainingModel)
     elif method == "ARIMA" or method == "AR":
         result_path = forecast_ARIMA(method=method, clusters=clusters, realCrimes=realCrimes,
-                       periodsAhead_list=periodsAhead_list, gridshape=gridshape, ignoreFirst=ignoreFirst, threshold=threshold, maxDist=maxDist)
+                                     periodsAhead_list=periodsAhead_list, gridshape=gridshape, ignoreFirst=ignoreFirst, threshold=threshold, maxDist=maxDist, isRetraining=isRetrainingModel)
     else:
         result_path = forecast_MM(method=method, clusters=clusters, realCrimes=realCrimes,
-                    periodsAhead_list=periodsAhead_list, gridshape=gridshape, ignoreFirst=ignoreFirst, threshold=threshold, maxDist=maxDist)
-    
+                                  periodsAhead_list=periodsAhead_list, gridshape=gridshape, ignoreFirst=ignoreFirst, threshold=threshold, maxDist=maxDist)
+
     clusters, _, forecasts = pd.read_pickle(result_path)
-    crimesPredictedPerCluster = [sum(forecasts[columnName][-periodsAhead_list[0]:]) for columnName in forecasts]
+    crimesPredictedPerCluster = [
+        sum(forecasts[columnName][-periodsAhead_list[0]:]) for columnName in forecasts]
     resource_indexes = range(0, metricMax, metricPrecision)
     file_path = compute_resource_allocation(resource_indexes, 1, [gridshape], periodsAhead_list, ignoreFirst, [
                                             threshold], 1, [method], lon_min, lon_max, lat_min, lat_max)
@@ -265,7 +268,8 @@ def clusterAndPredict(request):
         'djmaps/plotResult.py'), file_path, image_path])
     with open(image_path, "rb") as imageFile:
         image_data = base64.b64encode(imageFile.read())
-    response = HttpResponse(pd.io.json.dumps([crimesPredictedPerCluster, image_data]))
+    response = HttpResponse(pd.io.json.dumps(
+        [crimesPredictedPerCluster, image_data]))
     response['Access-Control-Allow-Origin'] = '*'
     response.status_code = 200
     return response

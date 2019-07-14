@@ -9,7 +9,7 @@ from inspect import getsourcefile
 from .general_functions import savePredictions, saveParameters, getIfParametersExists
 # Compute predictions using Seasonal Moving Average Model
 
-def forecast_ARIMA(method, clusters, realCrimes, periodsAhead_list, gridshape, ignoreFirst, threshold, maxDist):
+def forecast_ARIMA(method, clusters, realCrimes, periodsAhead_list, gridshape, ignoreFirst, threshold, maxDist, isRetraining):
     assert method in ['MA', 'AR', 'ARIMA']
     print("Starting Predictions_{}".format(method))
     cluster_size = len(clusters.Cluster.values)
@@ -22,7 +22,7 @@ def forecast_ARIMA(method, clusters, realCrimes, periodsAhead_list, gridshape, i
         # this step is added specifically for the django prediction tool
         # periodsAhead_list contains only one element in the app
         test_size = len(realCrimes) // 3
-        
+
         print("Predicting cluster {} with threshold {} using {}".format(
             c, threshold, method))
         cluster_cntr += 1
@@ -37,7 +37,7 @@ def forecast_ARIMA(method, clusters, realCrimes, periodsAhead_list, gridshape, i
         # if the parameters exist
         params = getIfParametersExists(
             method, gridshape, c, ignoreFirst, threshold, maxDist)
-        if params:
+        if not isRetraining and params:
             print("Loading existing parameters for ...")
             pred_model = sm.tsa.statespace.SARIMAX(endog=df, order=params[0], seasonal_order=params[1],
                                                    enforce_stationarity=False, enforce_invertibility=False, hamilton_representation=False)
