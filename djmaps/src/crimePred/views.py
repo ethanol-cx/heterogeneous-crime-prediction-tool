@@ -223,7 +223,8 @@ def clusterAndPredict(request):
     maxDist = 1
     ignoreFirst = 225
     periodsAhead_list = [int(body['periodsAhead'])]
-    isRetrainingModel = bool(body['retrain-model-checkbox'])
+    isRetrainingModel = bool(body['retrainModel'])
+    print(isRetrainingModel)
     # clusters = body['clusters']
     # realCrimes = body['realCrimes']
 
