@@ -1,5 +1,5 @@
 mapboxgl.accessToken =
-'pk.eyJ1Ijoia2F0aGxlZW54dWUiLCJhIjoiY2pyOXU5Z3JlMGxiNzQ5cGgxZmo5MWhzeiJ9.xyOwT8LWfjpOlEvPF2Iy7Q';
+    'pk.eyJ1Ijoia2F0aGxlZW54dWUiLCJhIjoiY2pyOXU5Z3JlMGxiNzQ5cGgxZmo5MWhzeiJ9.xyOwT8LWfjpOlEvPF2Iy7Q';
 let dataCrimes;
 let ct = new Set();
 let dates = new Set();
@@ -9,7 +9,7 @@ let timeCommitted = new Set();
 let ctCommitted = new Set();
 let colorArr = new Array();
 let approximateCentroidsForClusters = new Array();
-
+let clustered = false;
 // let clusters;
 // let realCrimes;
 // let dbPredict = [];
@@ -338,7 +338,9 @@ function applyFilters(map) {
 
 function removeExistingPredictionLayer(map) {
     if (map.getLayer('prediction-results')) {
-        map.removeLayer('prediction-results').removeSource('prediction-result-sum');
+        map.removeLayer('prediction-results').removeSource(
+            'prediction-result-sum'
+        );
     }
 }
 
@@ -524,20 +526,27 @@ function calculateApproximateCentroidsForClusters(points) {
     let lat_count = 0;
     let lon_sum = 0;
     let lon_count = 0;
-    points.forEach((value) => {
-        lat_sum += value[1]
-        lon_sum += value[0]
-        lat_count += 1
-        lon_count += 1
-    })
-    approximateCentroidsForClusters.push([lon_sum / lon_count, lat_sum / lat_count]);
-
+    points.forEach(value => {
+        lat_sum += value[1];
+        lon_sum += value[0];
+        lat_count += 1;
+        lon_count += 1;
+    });
+    // shifting the centroid from the center so that in some clusters - e.g. a cluster like a triangle,
+    // the number won't be too off the cluster. The point is shiftted towards the upper-right direction
+    // just because on the USC DPS dataset, the north - west corner tends to form a huge triangle with the angle
+    // on the upper right portion being 90 degrees; but this may not apply to other datasets.
+    // Needs to come up with better idea to get approximateCentroidsForClusters.
+    approximateCentroidsForClusters.push([
+        (lon_sum / lon_count), // * 0.999999999 (to shift)
+        (lat_sum / lat_count) // * 1.00000001 (to shift)
+    ]);
 }
 function addClusterLayersFromBoundaries(data, map) {
     // for each cluster
     for (let i = 0; i < data.length; ++i) {
         let points = data[i];
-        
+
         // calculate the approximate 'central' points for displaying the number of crimes
         calculateApproximateCentroidsForClusters(points);
 
@@ -560,22 +569,29 @@ function addClusterLayersFromBoundaries(data, map) {
                         colorArr[2 * i + 3],
                         map
                     );
+                    console.log(colorArr[2 * i + 3], points)
                     points.slice(path_idx.get(hash), j);
                     points = data[i]
                         .slice(0, path_idx.get(hash))
                         .concat(data[i].slice(j));
+                    // one edge case for unusual mapbox behavior for add layer `fill` type
+                    if (j === points.length - 1) { 
+                        points = [data[i][j]].slice(data[i].slice(0, path_idx.get(hash)));
+                    }
                     break;
                 }
                 path_idx.set(hash, j);
             }
         }
-        addClusterLayer(clusterID, points, colorArr[2 * i + 3], map)
+        addClusterLayer(clusterID, points, colorArr[2 * i + 3], map);
+        console.log(colorArr[2 * i + 3], points)
     }
 }
 
 function cluster(map) {
     removeExistingClusterLayers(map);
     removeExistingPredictionLayer(map);
+    clustered = false;
     x = updateFilteredPoints();
 
     // if (method === 'DBSCAN'){
@@ -620,12 +636,20 @@ function cluster(map) {
             gridShape: '(' + grid_x + ',' + grid_y + ')',
             threshold: threshold
         }),
-        success: function(data) {
-            $('.cluster-button')[0].classList.remove('loading');
+        success: (data) => {
             data = JSON.parse(data);
             addClusterLayersFromBoundaries(data[0], map);
+            clustered = true;
             // clusters = data[2];
             // realCrimes = data[3];
+        },
+        fail: (xhr, textStatus, errorThrown) => {
+            alert(`request failed with textStatus: ${textStatus} and error:
+            ${errorThrown}`);
+            clustered = false;
+        },
+        always: () => {
+            $('.cluster-button')[0].classList.remove('loading');
         }
     });
 }
@@ -637,32 +661,34 @@ function clusterButtonHookUp(map) {
 }
 
 function addPredictedNumbersToMap(crimesPredicted, map) {
-    let predictedCountsData = { 'type': 'FeatureCollection' };
+    let predictedCountsData = { type: 'FeatureCollection' };
     let features = new Array();
     crimesPredicted.forEach((value, index) => {
         features.push({
-            'type': 'Feature',
-            'properties': {
-                'counts': String(value),
+            type: 'Feature',
+            properties: {
+                counts: String(value)
             },
-            'geometry': {
-                'type': 'Point',
-                'coordinates': approximateCentroidsForClusters[index]
+            geometry: {
+                type: 'Point',
+                coordinates: approximateCentroidsForClusters[index]
             }
         });
     });
     predictedCountsData['features'] = features;
     map.addSource('prediction-result-sum', {
-        'type': 'geojson',
-        'data': predictedCountsData
+        type: 'geojson',
+        data: predictedCountsData
     });
     map.addLayer({
-        "id": "prediction-results",
-        "type": "symbol",
-        "source": "prediction-result-sum",
-        "layout": {
-            "text-field": ["get", "counts"],
-            "text-justify": "center",
+        id: 'prediction-results',
+        type: 'symbol',
+        source: 'prediction-result-sum',
+        layout: {
+            'text-field': ['get', 'counts'],
+            'text-justify': 'auto',
+            'symbol-spacing': 1,
+            'text-size': 9
         }
     });
     console.log(map.getLayer('predictionResults'));
@@ -673,7 +699,9 @@ function predictButtonHookUp(map) {
     $('.predict-button').click(function() {
         $('.predict-button')[0].classList.add('loading');
         $('.predict-button')[0].classList.add('loading-lrg');
-        cluster(map);
+        if (!clustered) {
+            cluster(map);
+        } 
         x = updateFilteredPoints();
         $.ajax({
             type: 'POST',
@@ -684,22 +712,30 @@ function predictButtonHookUp(map) {
                 method: $('input[name=prediction-method]:checked')[0].value,
                 'grid-x': $('#grid-x').val(),
                 'grid-y': $('#grid-y').val(),
-                'threshold': $('#threshold').val(),
-                'metricPrecision': $('#metric-precision').val(),
-                'metricMax': $('#metric-max').val(),
-                'retrainModel': $('.retrain-model-checkbox').val()
+                threshold: $('#threshold').val(),
+                metricPrecision: $('#metric-precision').val(),
+                metricMax: $('#metric-max').val(),
+                retrainModel: $('.retrain-model-checkbox').val()
                 // clusters,
                 // realCrimes
             }),
-            success: function (response) {
-                const [crimesPredicted, imageData] = JSON.parse(response)
-				addPredictedNumbersToMap(crimesPredicted, map);
-                $('.predict-button')[0].classList.remove('loading');
+            success: (response) => {
+                const [crimesPredicted, imageData] = JSON.parse(response);
+                addPredictedNumbersToMap(crimesPredicted, map);
                 if ($('.empty')[0]) {
-                    $('.empty')[0].remove();     
+                    $('.empty')[0].remove();
                 }
                 $('.result img')[0].src = `data:image/png;base64, ${imageData}`;
                 $('.result img')[0].classList.remove('d-none');
+                clustered = true;
+            },
+            fail: (xhr, textStatus, errorThrown) => {
+                alert(`request failed with textStatus: ${textStatus} and error:
+                ${errorThrown}`); 
+                clustered = false;
+            },
+            always: () => {
+                $('.cluster-button')[0].classList.remove('loading');
             }
         });
     });

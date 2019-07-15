@@ -36,6 +36,14 @@ def forecast_MM(method, clusters, realCrimes, periodsAhead_list, gridshape, igno
         # train test split
         train = df[:-test_size]
         if train.sum() < 2:
+
+            # this step is added specifically for the django prediction tool
+            # periodsAhead_list contains only one element in the app
+            # about the test_size change for the tool only
+            if cluster_cntr == len(clusters.Cluster.values) - 1:
+            
+                test_size += periodsAhead_list[0]
+                
             continue
 
         look_back = 3
@@ -70,6 +78,10 @@ def forecast_MM(method, clusters, realCrimes, periodsAhead_list, gridshape, igno
         periodsAhead = periodsAhead_list[i]
         forecasts = pd.DataFrame(data=forecasted_data[i].T, columns=['C{}_Forecast'.format(c)
                                                                      for c in clusters.Cluster.values])
-        forecasts.index = df[-test_size:].index
+        # this step is added specifically for the django prediction tool
+        # periodsAhead_list contains only one element in the app
+        # This didn't update the index because it is slightly more complicated to 'extend' the date index by test_size.
+        # However, if this were to be done, it should take the value of: `df[-test_size + periodsAhead[0]:].index.append([<the future dates>]).`
+        # forecasts.index = df[-test_size:].index
         return savePredictions(clusters, realCrimes, forecasts, method,
                         gridshape, ignoreFirst, periodsAhead, threshold, maxDist)

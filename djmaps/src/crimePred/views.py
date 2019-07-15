@@ -224,7 +224,6 @@ def clusterAndPredict(request):
     ignoreFirst = 225
     periodsAhead_list = [int(body['periodsAhead'])]
     isRetrainingModel = True if body['retrainModel'] == 'on' else False
-    print(isRetrainingModel)
     # clusters = body['clusters']
     # realCrimes = body['realCrimes']
 
@@ -253,7 +252,7 @@ def clusterAndPredict(request):
 
     clusters, _, forecasts = pd.read_pickle(result_path)
     crimesPredictedPerCluster = [
-        sum(forecasts[columnName][-periodsAhead_list[0]:]) for columnName in forecasts]
+        round(sum(forecasts[columnName][-periodsAhead_list[0]:]), 3) for columnName in forecasts]
     resource_indexes = range(0, metricMax, metricPrecision)
     file_path = compute_resource_allocation(resource_indexes, 1, [gridshape], periodsAhead_list, ignoreFirst, [
                                             threshold], 1, [method], lon_min, lon_max, lat_min, lat_max)
