@@ -569,7 +569,7 @@ function addClusterLayersFromBoundaries(data, map) {
                         colorArr[2 * i + 3],
                         map
                     );
-                    console.log(colorArr[2 * i + 3], points)
+                    // console.log(colorArr[2 * i + 3], points)
                     points.slice(path_idx.get(hash), j);
                     points = data[i]
                         .slice(0, path_idx.get(hash))
@@ -640,6 +640,7 @@ function cluster(map) {
             data = JSON.parse(data);
             addClusterLayersFromBoundaries(data[0], map);
             clustered = true;
+            $('.cluster-button')[0].classList.remove('loading');
             // clusters = data[2];
             // realCrimes = data[3];
         },
@@ -647,10 +648,8 @@ function cluster(map) {
             alert(`request failed with textStatus: ${textStatus} and error:
             ${errorThrown}`);
             clustered = false;
-        },
-        always: () => {
             $('.cluster-button')[0].classList.remove('loading');
-        }
+        }           
     });
 }
 function clusterButtonHookUp(map) {
@@ -688,10 +687,9 @@ function addPredictedNumbersToMap(crimesPredicted, map) {
             'text-field': ['get', 'counts'],
             'text-justify': 'auto',
             'symbol-spacing': 1,
-            'text-size': 9
+            'text-size': 12
         }
     });
-    console.log(map.getLayer('predictionResults'));
 }
 
 function predictButtonHookUp(map) {
@@ -725,19 +723,30 @@ function predictButtonHookUp(map) {
                 if ($('.empty')[0]) {
                     $('.empty')[0].remove();
                 }
-                $('.result img')[0].src = `data:image/png;base64, ${imageData}`;
-                $('.result img')[0].classList.remove('d-none');
-                clustered = true;
+                $('.result')[0].innerHTML += `<img src="data:image/png;base64, ${imageData}"/>`
+                clustered = false;
+                $('.predict-button')[0].classList.remove('loading');
+                $('.clear-button')[0].classList.remove('disabled');
             },
             fail: (xhr, textStatus, errorThrown) => {
                 alert(`request failed with textStatus: ${textStatus} and error:
                 ${errorThrown}`); 
-                clustered = false;
-            },
-            always: () => {
-                $('.cluster-button')[0].classList.remove('loading');
+                $('.predict-button')[0].classList.remove('loading');
             }
         });
+    });
+}
+
+function clearPlotsButtonHookUp() {
+    $('.clear-button').click(() => {
+        $('.result')[0].innerHTML = `					
+        <div class="empty img-fit-cover d-visible">
+            <div class="empty-icon">
+                <i class="icon icon-photo"></i>
+            </div>
+            <p class="empty-title h5">You have no results.</p>
+        </div>`;
+        $('.clear-button')[0].classList.add('disabled');
     });
 }
 
@@ -806,9 +815,7 @@ function loadmap() {
         center: [-118.2851, 34.026],
         zoom: 14
     });
-    console.log(map);
     mapboxData = formatDataToMapbox();
-    console.log(mapboxData);
     map.on('load', function() {
         map.addSource('dataCrimes', {
             type: 'geojson',
@@ -826,6 +833,7 @@ function loadmap() {
     submitFunctionHookUp(map);
     clusterButtonHookUp(map);
     predictButtonHookUp(map);
+    clearPlotsButtonHookUp();
 }
 
 function handleFileSelect(evt) {
