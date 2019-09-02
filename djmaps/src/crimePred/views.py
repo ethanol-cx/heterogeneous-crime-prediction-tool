@@ -75,11 +75,6 @@ def isNextNode(neighbor_map, u, v):
         return False if count1 > count2 else True
 
 
-def printGraph(neighbor_map):
-    for key, value in neighbor_map.items():
-        print(key, ':', value)
-
-
 def fleuryEulerianCircuit(neighbor_map, u, node_path):
     for v in list(neighbor_map[u]):
         if v not in neighbor_map[u]:
@@ -90,23 +85,19 @@ def fleuryEulerianCircuit(neighbor_map, u, node_path):
             fleuryEulerianCircuit(neighbor_map, v, node_path)
 
 
-def index(request):
-    return HttpResponse('This is the crimePred index.')
-
-
 def convertFromFeaturesToData(features):
     data = pd.DataFrame(features, columns=[
                         'Category', 'Latitude', 'Longitude', 'Date'])
-    print(data.head)
-    print("Minimum latitude: %f" % min(data["Latitude"]))
-    print("Maximum latitude: %f" % max(data["Latitude"]))
-    print("Minimum longitude: %f" % min(data["Longitude"]))
-    print("Maximum longitude: %f" % max(data["Longitude"]))
-    print("Number of datapoints before selecting: {}".format(len(data.index)))
+    # print(data.head)
+    # print("Minimum latitude: %f" % min(data["Latitude"]))
+    # print("Maximum latitude: %f" % max(data["Latitude"]))
+    # print("Minimum longitude: %f" % min(data["Longitude"]))
+    # print("Maximum longitude: %f" % max(data["Longitude"]))
+    # print("Number of datapoints before selecting: {}".format(len(data.index)))
     # Select square window
     data = data[(lat_min <= data.Latitude) & (data.Latitude <= lat_max)
                 & (lon_min <= data.Longitude) & (data.Longitude <= lon_max)]
-    print("Number of datapoints after selecting: {}".format(len(data.index)))
+    # print("Number of datapoints after selecting: {}".format(len(data.index)))
     data.sort_values(['Latitude', 'Longitude', 'Date'], inplace=True)
     data = data.reset_index(drop=True)
     return data
@@ -149,7 +140,6 @@ def heterogeneousCluster(request):
         node_path = []
         start_point = next(iter(border_set))[:2]
         fleuryEulerianCircuit(neighbor_map, start_point, node_path)
-        print(node_path)
         border_result.append(node_path)
         crime_counts.append(num_of_crimes)
     resp = HttpResponse(pd.io.json.dumps(
@@ -158,63 +148,9 @@ def heterogeneousCluster(request):
     return resp
 
 
-def cluster(request, dataset, gridshape, threshold):
-    if dataset == 'dps':
-        data = pd.read_pickle(os.path.abspath(
-            './prediction/dataset/DPSUSC.pkl'))
-        ignoreFirst = 225
-    elif dataset == 'la':
-        data = pd.read_pickle(os.path.abspath(
-            './prediction/dataset/LAdata.pkl'))
-        ignoreFirst = 104
-    else:
-        response = HttpResponse(
-            'Wrong dataset. Should choose from \'dps\' or \'la\'')
-        response.status_code = 422
-        response['Access-Control-Allow-Origin'] = '*'
-        return response
-    try:
-        clusters, realCrimes = computeClustersAndOrganizeData(
-            data, gridshape, ignoreFirst, threshold, 1)
-        border_result = []
-        crime_counts = []
-        for geometry in clusters.Geometry:
-            num_of_crimes = 0
-            geometry_array = geometry.toarray()
-            border_set = set()
-            for i in range(len(geometry_array)):
-                row = geometry_array[i]
-                for j in range(len(row)):
-                    if row[j] == 0:
-                        continue
-                    borders = getBorderCordinates(
-                        lon_max, lon_min, lat_max, lat_min, gridshape, i, j)
-                    for border in borders:
-                        if border not in border_set:
-                            border_set.add(border)
-                        else:
-                            border_set.remove(border)
-                    num_of_crimes += row[j]
-            border_result.append(list(border_set))
-            crime_counts.append(num_of_crimes)
-            num_of_crimes = 0
-        response = HttpResponse(pd.io.json.dumps(
-            [border_result, crime_counts]))
-        response.status_code = 200
-        response['Access-Control-Allow-Origin'] = '*'
-        return response
-    except:
-        response = HttpResponse('Internal server error with the followint inputs:\ndataset: {}, gridshape: {}, threshold: {}'.format(
-            dataset, gridshape, threshold))
-        response.status_code = 400
-        response['Access-Control-Allow-Origin'] = '*'
-        return response
-
-
 def clusterAndPredict(request):
     body_unicode = request.body.decode('utf-8')
     body = json.loads(body_unicode)
-    data = convertFromFeaturesToData(body['features'])
     gridshape = tuple((int(body['grid-x']), int(body['grid-y'])))
     method = body['method']
     threshold = int(body['threshold'])
@@ -224,21 +160,9 @@ def clusterAndPredict(request):
     ignoreFirst = 225
     periodsAhead_list = [int(body['periodsAhead'])]
     isRetrainingModel = True if body['retrainModel'] == 'on' else False
-    # clusters = body['clusters']
-    # realCrimes = body['realCrimes']
-
-    # if not clusters:
-    if True:  # temprorary solution
-        # Compute the cluster/grid distribution based on the threshold.
-        print('Computing clusters ...')
-
-        # In grid_prediction, which predict the crimes without clustering, the threshold is set to 0
-        # `clusters` is the cluster distributions
-        clusters, realCrimes = computeClustersAndOrganizeData(
-            data, gridshape, ignoreFirst, threshold, maxDist)
-
-        print('Number of clusters: {}'.format(len(clusters)))
-        print('Computing predictions ...')
+    isModelEvaluation = False
+    clusters = body['clusters']
+    realCrimes = body['realCrimes']
 
     if method == "LSTM":
         result_path = forecast_LSTM(clusters=clusters, realCrimes=realCrimes,
@@ -248,26 +172,28 @@ def clusterAndPredict(request):
                                      periodsAhead_list=periodsAhead_list, gridshape=gridshape, ignoreFirst=ignoreFirst, threshold=threshold, maxDist=maxDist, isRetraining=isRetrainingModel)
     else:
         result_path = forecast_MM(method=method, clusters=clusters, realCrimes=realCrimes,
-                                  periodsAhead_list=periodsAhead_list, gridshape=gridshape, ignoreFirst=ignoreFirst, threshold=threshold, maxDist=maxDist)
+                                  periodsAhead_list=periodsAhead_list, gridshape=gridshape, ignoreFirst=ignoreFirst, threshold=threshold, maxDist=maxDist, isModelEvaluation=isModelEvaluation)
 
     clusters, _, forecasts = pd.read_pickle(result_path)
     crimesPredictedPerCluster = [
         round(sum(forecasts[columnName][-periodsAhead_list[0]:]), 3) for columnName in forecasts]
-    resource_indexes = range(0, metricMax, metricPrecision)
-    file_path = compute_resource_allocation(resource_indexes, 1, [gridshape], periodsAhead_list, ignoreFirst, [
-                                            threshold], 1, [method], lon_min, lon_max, lat_min, lat_max)
+    # resource_indexes = range(0, metricMax, metricPrecision)
+    # file_path = compute_resource_allocation(resource_indexes, 1, [gridshape], periodsAhead_list, ignoreFirst, [
+    #                                         threshold], 1, [method], lon_min, lon_max, lat_min, lat_max)
 
-    filename = "{}_{}_({}x{})({})_{}_ahead.png".format('LA' if ignoreFirst == 104 else 'USC',
-                                                       method, gridshape[0], gridshape[1], threshold, periodsAhead_list[0])
-    os.makedirs(os.path.abspath("results/"), exist_ok=True)
-    os.makedirs(os.path.abspath(
-        "results/plot"), exist_ok=True)
-    image_path = os.path.abspath('results/plot/{}').format(filename)
+    # filename = "{}_{}_({}x{})({})_{}_ahead.png".format('LA' if ignoreFirst == 104 else 'USC',
+    #                                                    method, gridshape[0], gridshape[1], threshold, periodsAhead_list[0])
+    # os.makedirs(os.path.abspath("results/"), exist_ok=True)
+    # os.makedirs(os.path.abspath(
+    #     "results/plot"), exist_ok=True)
+    # image_path = os.path.abspath('results/plot/{}').format(filename)
 
-    subprocess.run(['python3', os.path.abspath(
-        'djmaps/plotResult.py'), file_path, image_path])
-    with open(image_path, "rb") as imageFile:
-        image_data = base64.b64encode(imageFile.read())
+    # subprocess.run(['python3', os.path.abspath(
+    #     'djmaps/plotResult.py'), file_path, image_path])
+    # with open(image_path, "rb") as imageFile:
+    #     image_data = base64.b64encode(imageFile.read())
+
+    image_data = None # temporary holder
     response = HttpResponse(pd.io.json.dumps(
         [crimesPredictedPerCluster, image_data]))
     response['Access-Control-Allow-Origin'] = '*'
@@ -314,3 +240,56 @@ def clusterAndPredict(request):
 #         -1, len(timeseries) // 3)))
 #     response.status_code = 200
 #     return response
+
+
+# def cluster(request, dataset, gridshape, threshold):
+#     if dataset == 'dps':
+#         data = pd.read_pickle(os.path.abspath(
+#             './prediction/dataset/DPSUSC.pkl'))
+#         ignoreFirst = 225
+#     elif dataset == 'la':
+#         data = pd.read_pickle(os.path.abspath(
+#             './prediction/dataset/LAdata.pkl'))
+#         ignoreFirst = 104
+#     else:
+#         response = HttpResponse(
+#             'Wrong dataset. Should choose from \'dps\' or \'la\'')
+#         response.status_code = 422
+#         response['Access-Control-Allow-Origin'] = '*'
+#         return response
+#     try:
+#         clusters, realCrimes = computeClustersAndOrganizeData(
+#             data, gridshape, ignoreFirst, threshold, 1)
+#         border_result = []
+#         crime_counts = []
+#         for geometry in clusters.Geometry:
+#             num_of_crimes = 0
+#             geometry_array = geometry.toarray()
+#             border_set = set()
+#             for i in range(len(geometry_array)):
+#                 row = geometry_array[i]
+#                 for j in range(len(row)):
+#                     if row[j] == 0:
+#                         continue
+#                     borders = getBorderCordinates(
+#                         lon_max, lon_min, lat_max, lat_min, gridshape, i, j)
+#                     for border in borders:
+#                         if border not in border_set:
+#                             border_set.add(border)
+#                         else:
+#                             border_set.remove(border)
+#                     num_of_crimes += row[j]
+#             border_result.append(list(border_set))
+#             crime_counts.append(num_of_crimes)
+#             num_of_crimes = 0
+#         response = HttpResponse(pd.io.json.dumps(
+#             [border_result, crime_counts]))
+#         response.status_code = 200
+#         response['Access-Control-Allow-Origin'] = '*'
+#         return response
+#     except:
+#         response = HttpResponse('Internal server error with the followint inputs:\ndataset: {}, gridshape: {}, threshold: {}'.format(
+#             dataset, gridshape, threshold))
+#         response.status_code = 400
+#         response['Access-Control-Allow-Origin'] = '*'
+#         return response

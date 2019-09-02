@@ -10,8 +10,8 @@ let ctCommitted = new Set();
 let colorArr = new Array();
 let approximateCentroidsForClusters = new Array();
 let clustered = false;
-// let clusters;
-// let realCrimes;
+let clusters;
+let realCrimes;
 // let dbPredict = [];
 // let timeseriesToPredict = [];
 
@@ -212,10 +212,10 @@ function appendCrimeTypes() {
     ct.forEach((v1, v2, set) => {
         $('#crimeType').append(
             "<input class = 'change' type = 'checkbox' id = 'crimeType-" +
-                v1 +
-                "' name = 'crimeType-" +
-                v1 +
-                "' font='sans-serif' checked></input>"
+            v1 +
+            "' name = 'crimeType-" +
+            v1 +
+            "' font='sans-serif' checked></input>"
         );
         $('#crimeType').append(
             "<label for = 'crimeType-" + v1 + "'> " + v1 + '</label><br>'
@@ -224,7 +224,7 @@ function appendCrimeTypes() {
 }
 
 function mouseOnPointsEvent(popup, map) {
-    map.on('mouseenter', 'crimes', function(e) {
+    map.on('mouseenter', 'crimes', function (e) {
         const {
             Category,
             Date,
@@ -232,7 +232,7 @@ function mouseOnPointsEvent(popup, map) {
             Longitude
         } = e.features[0].properties;
         let description = `Type: ${Category}<br/>
-							Date: ${Date} <br/> 
+							Date: ${Date} <br/>
 							Latitude: ${Latitude} <br/>
 							Longitude: ${Longitude} <br/>
 							${e.features.length} incident(s) happened here.`;
@@ -265,7 +265,7 @@ function mouseOnPointsEvent(popup, map) {
             .addTo(map);
     });
 
-    map.on('mouseleave', 'crimes', function() {
+    map.on('mouseleave', 'crimes', function () {
         map.getCanvas().style.cursor = '';
         popup.remove();
     });
@@ -345,7 +345,7 @@ function removeExistingPredictionLayer(map) {
 }
 
 function changeFunctionsHookUp(map) {
-    $('.change').change(function() {
+    $('.change').change(function () {
         const opType = $(this)
             .prop('name')
             .slice(0, 3);
@@ -359,7 +359,7 @@ function changeFunctionsHookUp(map) {
         if (opType === 'day') {
             if (timeValue === 'ALL') {
                 if (!isChecked) return;
-                dates.forEach(function(value) {
+                dates.forEach(function (value) {
                     dateCommitted.add(value);
                 });
                 $('#dates input:checkbox').prop('checked', true);
@@ -387,7 +387,7 @@ function changeFunctionsHookUp(map) {
                 };
                 const dayString = timeValue;
 
-                dates.forEach(function(value) {
+                dates.forEach(function (value) {
                     let curDate = new Date(value);
                     if (curDate.getDay() === daysNumDict[dayString]) {
                         if (!isChecked) {
@@ -401,7 +401,7 @@ function changeFunctionsHookUp(map) {
         } else if (opType === 'tod') {
             if (timeValue === 'ALL') {
                 if (!isChecked) return;
-                times.forEach(function(value) {
+                times.forEach(function (value) {
                     timeCommitted.add(value);
                 });
                 $('#timeOfDay input:checkbox').prop('checked', true);
@@ -426,7 +426,7 @@ function changeFunctionsHookUp(map) {
                     Night: [0, 4]
                 };
                 let hour;
-                times.forEach(function(value) {
+                times.forEach(function (value) {
                     hour = parseInt(value.split(':')[0]);
                     if (
                         hour >= todDict[timeValue][0] &&
@@ -458,7 +458,7 @@ function changeFunctionsHookUp(map) {
         ) {
             if (typeValue === 'ALL') {
                 if (!isChecked) return;
-                ct.forEach(function(value) {
+                ct.forEach(function (value) {
                     ctCommitted.add(value);
                 });
                 $('#crimeType input:checkbox').prop('checked', true);
@@ -506,7 +506,7 @@ function changeFunctionsHookUp(map) {
 }
 
 function submitFunctionHookUp(map) {
-    $('#submit').click(function() {
+    $('#submit').click(function () {
         dateFrom = new Date(document.getElementById('date-from').value);
         dateTo = new Date(document.getElementById('date-to').value);
         $("#dates input[name='day-NONE']:checkbox").prop('checked', false);
@@ -575,7 +575,7 @@ function addClusterLayersFromBoundaries(data, map) {
                         .slice(0, path_idx.get(hash))
                         .concat(data[i].slice(j));
                     // one edge case for unusual mapbox behavior for add layer `fill` type
-                    if (j === points.length - 1) { 
+                    if (j === points.length - 1) {
                         points = [data[i][j]].slice(data[i].slice(0, path_idx.get(hash)));
                     }
                     break;
@@ -592,38 +592,11 @@ function cluster(map) {
     removeExistingClusterLayers(map);
     removeExistingPredictionLayer(map);
     clustered = false;
-    x = updateFilteredPoints();
-
-    // if (method === 'DBSCAN'){
-    // 		$.ajax({
-    // 			type: "POST",
-    // 			url: "http://localhost:8000/dbscan",
-    // 			data: JSON.stringify({ 'features': x, 'dist': document.getElementById("DBScanInput").value }),
-    // 			success: function (data) {
-    // 				data = JSON.parse(data);
-    // 				data2 = [];
-    // 				for (let key = 0; key < x.length; key++) {
-    // 					data2[key] = {};
-    // 					data2[key]['geometry'] = data['geometry'][key];
-    // 					data2[key]['type'] = data['type'][key];
-    // 					data2[key]['properties'] = data['properties'][key];
-    // 					//console.log(dataCrimes);
-    // 				}
-    // 				dataCrimes['features'] = data2;
-    // 				map.getSource('dataCrimes').setData(dataCrimes);
-    // 				timeseries = findDBScanCluster(DBSCANdistance, x);
-    // 				timeseriesToPredict = timeseries;
-    // 				console.log("DBSCANNED " + timeseries);
-
-    // 				//console.log(data2);
-    // 				//console.log(dataCrimes);
-    // 			}
-    // 		});
-    // 	return
-    // }
+    const x = updateFilteredPoints();
 
     $('.cluster-button')[0].classList.add('loading');
     $('.cluster-button')[0].classList.add('loading-lrg');
+
     const grid_x = document.getElementById('grid-x').value;
     const grid_y = document.getElementById('grid-y').value;
     const threshold = document.getElementById('threshold').value;
@@ -631,6 +604,7 @@ function cluster(map) {
     $.ajax({
         type: 'POST',
         url: 'http://localhost:8000/crimePred/heterogeneous-cluster',
+        async: false,
         data: JSON.stringify({
             features: x,
             gridShape: '(' + grid_x + ',' + grid_y + ')',
@@ -638,23 +612,22 @@ function cluster(map) {
         }),
         success: (data) => {
             data = JSON.parse(data);
-            addClusterLayersFromBoundaries(data[0], map);
+            [border_result, crime_counts, clusters, realCrimes] = data;
+            addClusterLayersFromBoundaries(border_result, map);
             clustered = true;
-            $('.cluster-button')[0].classList.remove('loading');
-            // clusters = data[2];
-            // realCrimes = data[3];
+            $('.cluster-button')[0].classList.remove('loading'); //clear the loading spinner for cluster
         },
         fail: (xhr, textStatus, errorThrown) => {
             alert(`request failed with textStatus: ${textStatus} and error:
             ${errorThrown}`);
             clustered = false;
             $('.cluster-button')[0].classList.remove('loading');
-        }           
+        }
     });
 }
 function clusterButtonHookUp(map) {
     $('.cluster-button')[0].classList.remove('disabled');
-    $('.cluster-button').click(function() {
+    $('.cluster-button').click(function () {
         cluster(map);
     });
 }
@@ -694,13 +667,13 @@ function addPredictedNumbersToMap(crimesPredicted, map) {
 
 function predictButtonHookUp(map) {
     $('.predict-button')[0].classList.remove('disabled');
-    $('.predict-button').click(function() {
+    $('.predict-button').click(function () {
         $('.predict-button')[0].classList.add('loading');
         $('.predict-button')[0].classList.add('loading-lrg');
         if (!clustered) {
             cluster(map);
-        } 
-        x = updateFilteredPoints();
+        }
+        const x = updateFilteredPoints();
         $.ajax({
             type: 'POST',
             url: 'http://localhost:8000/crimePred/cluster-predict',
@@ -713,9 +686,9 @@ function predictButtonHookUp(map) {
                 threshold: $('#threshold').val(),
                 metricPrecision: $('#metric-precision').val(),
                 metricMax: $('#metric-max').val(),
-                retrainModel: $('.retrain-model-checkbox').val()
-                // clusters,
-                // realCrimes
+                retrainModel: $('.retrain-model-checkbox').val(),
+                clusters,
+                realCrimes
             }),
             success: (response) => {
                 const [crimesPredicted, imageData] = JSON.parse(response);
@@ -730,7 +703,7 @@ function predictButtonHookUp(map) {
             },
             fail: (xhr, textStatus, errorThrown) => {
                 alert(`request failed with textStatus: ${textStatus} and error:
-                ${errorThrown}`); 
+                ${errorThrown}`);
                 $('.predict-button')[0].classList.remove('loading');
             }
         });
@@ -739,7 +712,7 @@ function predictButtonHookUp(map) {
 
 function clearPlotsButtonHookUp() {
     $('.clear-button').click(() => {
-        $('.result')[0].innerHTML = `					
+        $('.result')[0].innerHTML = `
         <div class="empty img-fit-cover d-visible">
             <div class="empty-icon">
                 <i class="icon icon-photo"></i>
@@ -816,7 +789,7 @@ function loadmap() {
         zoom: 14
     });
     mapboxData = formatDataToMapbox();
-    map.on('load', function() {
+    map.on('load', function () {
         map.addSource('dataCrimes', {
             type: 'geojson',
             data: mapboxData
@@ -844,8 +817,8 @@ function handleFileSelect(evt) {
         let reader = new FileReader();
 
         // Closure to capture the file information.
-        reader.onload = (function(theFile) {
-            return function(e) {
+        reader.onload = (function (theFile) {
+            return function (e) {
                 dataCrimes = e.target.result;
                 try {
                     dataCrimes = JSON.parse(dataCrimes);

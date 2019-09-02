@@ -8,49 +8,43 @@ from .general_functions import savePredictions, saveParameters, getIfParametersE
 
 
 def dynamic_ma_predictions(df, look_back, start, end):
-    results = np.zeros(end - start + 1)
+    results = np.zeros(end - start)
     window = np.array(df[start-look_back:start])
-    for i in range(start, end+1):
+    for i in range(start, end):
         results[i-start] = window.sum() * 1.0 / look_back
         window = np.append(window[1:], [results[i-start]])
     return results
 
 
-def forecast_MM(method, clusters, realCrimes, periodsAhead_list, gridshape, ignoreFirst, threshold, maxDist):
+def forecast_MM(method, clusters, realCrimes, periodsAhead_list, gridshape, ignoreFirst, threshold, maxDist, isModelEvaluation):
     print("Starting Predictions_{}".format(method))
-    cluster_size = len(clusters.Cluster.values)
+    cluster = clusters['Cluster']
+    cluster_size = len(cluster.keys())
     cluster_cntr = -1
     periodsAhead_cntr = -1
-    test_size = len(realCrimes) // 3
-    forecasted_data = np.zeros(
-        (len(periodsAhead_list), cluster_size, test_size + periodsAhead_list[0]))
-    for c in clusters.Cluster.values:
+    if isModelEvaluation:
         # this step is added specifically for the django prediction tool
         # periodsAhead_list contains only one element in the app
-        test_size = len(realCrimes) // 3
-
+        test_size = len(next(iter(realCrimes.values()))) // 3
+    else:
+        # for the django prediction tool, predicts only the future data points (first set it to 0 for train/test split)
+        test_size = 0
+    forecasted_data = np.zeros(
+        (len(periodsAhead_list), cluster_size, test_size + 0 if isModelEvaluation else periodsAhead_list[0]))
+    for c in cluster.values():
         print("Predicting cluster {} with threshold {} using {}".format(
             c, threshold, method))
         cluster_cntr += 1
-        df = realCrimes['C{}_Crimes'.format(c)]
+
+        df = list(realCrimes['C{}_Crimes'.format(c)].values())
         # train test split
         train = df[:-test_size]
-        if train.sum() < 2:
-
-            # this step is added specifically for the django prediction tool
-            # periodsAhead_list contains only one element in the app
-            # about the test_size change for the tool only
-            if cluster_cntr == len(clusters.Cluster.values) - 1:
-            
-                test_size += periodsAhead_list[0]
-                
+        if not isModelEvaluation:
+            test_size += periodsAhead_list[0]
+        if sum(train) < 2:
             continue
 
         look_back = 3
-
-        # this step is added specifically for the django prediction tool
-        # periodsAhead_list contains only one element in the app
-        test_size += periodsAhead_list[0]
 
         # for each predict horizon - `periodsAhead`, we perform rolling time series prediction with different window sizes
         # Note: the the `start` and the `end` defines the window and splits the observation and the "y_test"
@@ -61,7 +55,11 @@ def forecast_MM(method, clusters, realCrimes, periodsAhead_list, gridshape, igno
             for i in range(test_size):
                 pred = dynamic_ma_predictions(
                     df, look_back, i+len(train)-periodsAhead, i+len(train))
-                predictions[i] = pred[-1]
+                if isModelEvaluation:
+                    predictions[i] = pred[-1]
+                else:
+                    predictions = pred
+                    break
                 # history.append(pd.Series(test[i]), ignore_index=True)
 
             # apply the assumption that all predictions should be non-negative
@@ -77,11 +75,11 @@ def forecast_MM(method, clusters, realCrimes, periodsAhead_list, gridshape, igno
     for i in range(len(periodsAhead_list)):
         periodsAhead = periodsAhead_list[i]
         forecasts = pd.DataFrame(data=forecasted_data[i].T, columns=['C{}_Forecast'.format(c)
-                                                                     for c in clusters.Cluster.values])
+                                                                     for c in cluster.values()])
         # this step is added specifically for the django prediction tool
         # periodsAhead_list contains only one element in the app
         # This didn't update the index because it is slightly more complicated to 'extend' the date index by test_size.
         # However, if this were to be done, it should take the value of: `df[-test_size + periodsAhead[0]:].index.append([<the future dates>]).`
         # forecasts.index = df[-test_size:].index
         return savePredictions(clusters, realCrimes, forecasts, method,
-                        gridshape, ignoreFirst, periodsAhead, threshold, maxDist)
+                               gridshape, ignoreFirst, periodsAhead, threshold, maxDist)

@@ -1,101 +1,105 @@
 <!DOCTYPE html>
 <html>
-	<head>
-		<meta charset='utf-8' />
-		<title>Heterogeneous Crime Prediction</title>
-  		<meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
-		<link rel="stylesheet" href="https://unpkg.com/spectre.css/dist/spectre.min.css">
-		<link rel="stylesheet" type="text/css" href="./static/index.css">
-		<link rel="stylesheet" type="text/css" href="./static/icons.min.css">
-		<link rel="icon" type="image/png" href="./static/circle.png">
-		<script src='https://api.tiles.mapbox.com/mapbox-gl-js/v1.1.0/mapbox-gl.js'></script>
-		<link href='https://api.tiles.mapbox.com/mapbox-gl-js/v1.1.0/mapbox-gl.css' rel='stylesheet' />		
-		<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
-	</head>
-	<body>
-		<h1 class='title column col-mx-auto'>DPS Crime Map</h1>
-		<div class='container columns col-gapless'>
-			<div id='map' class='column col-6'></div>
-			<div class='action column col-6'>
-				<div class='load columns'>
-					<div class='col-3'>
-						<span class='label label-rounded label-primary'> Load Data: </span>
-					</div>
-					<div class='col-5'>
-						<input class='form-input files' type='file'>
-					</div>
-					<div class='col-1'>
-					</div>
-					<!-- <div class = 'col-2'>
+
+<head>
+	<meta charset='utf-8' />
+	<title>Heterogeneous Crime Prediction</title>
+	<meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
+	<link rel="stylesheet" href="https://unpkg.com/spectre.css/dist/spectre.min.css">
+	<link rel="stylesheet" type="text/css" href="./static/index.css">
+	<link rel="stylesheet" type="text/css" href="./static/icons.min.css">
+	<script src='https://api.tiles.mapbox.com/mapbox-gl-js/v1.1.0/mapbox-gl.js'></script>
+	<link href='https://api.tiles.mapbox.com/mapbox-gl-js/v1.1.0/mapbox-gl.css' rel='stylesheet' />
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+</head>
+
+<body>
+	<h1 class='title column col-mx-auto'>DPS Crime Map</h1>
+	<div class='container columns col-gapless'>
+		<div id='map' class='column col-6'></div>
+		<div class='action column col-6'>
+			<div class='load columns'>
+				<div class='col-3'>
+					<span class='label label-rounded label-primary'> Load Data: </span>
+				</div>
+				<div class='col-5'>
+					<input class='form-input files' type='file'>
+				</div>
+				<div class='col-1'>
+				</div>
+				<!-- <div class = 'col-2'>
 						<a href="#" class="btn" tabindex="0">
 							Upload
 						</a>
 					</div> -->
+			</div>
+			<div class='filter'>
+				<div>
+					<span class="label label-rounded label-primary">Filter with:</span>
 				</div>
-				<div class='filter'>
-					<div>
-						<span class="label label-rounded label-primary">Filter with:</span>
-					</div>
-					<div class='columns col-gapless'>
-						<div class="column col-4">
-							<div class="dropdown">
-								<a href="#" class="btn dropdown-toggle" tabindex="0">
-									Type<i class="icon icon-caret"></i>
-								</a>
-								<!-- menu component -->
-								<ul class="menu" id="crimeType">
-								</ul>
-							</div>
-						</div>
-						<div class="column col-4">
-							<div class="dropdown">
-								<a href="#" class="btn dropdown-toggle" tabindex="0">
-									Date<i class="icon icon-caret"></i>
-								</a>
-								<!-- menu component -->
-								<ul class="menu" id="dates">
-								</ul>
-							</div>
-						</div>
-						<div class="column col-4">
-							<div class="dropdown">
-								<a href="#" class="btn dropdown-toggle" tabindex="0">
-									Time<i class="icon icon-caret"></i>
-								</a>
-								<!-- menu component -->
-								<ul class="menu" id="timeOfDay">
-								</ul>
-							</div>
+				<div class='columns col-gapless'>
+					<div class="column col-4">
+						<div class="dropdown">
+							<a href="#" class="btn dropdown-toggle" tabindex="0">
+								Type<i class="icon icon-caret"></i>
+							</a>
+							<!-- menu component -->
+							<ul class="menu" id="crimeType">
+							</ul>
 						</div>
 					</div>
+					<div class="column col-4">
+						<div class="dropdown">
+							<a href="#" class="btn dropdown-toggle" tabindex="0">
+								Date<i class="icon icon-caret"></i>
+							</a>
+							<!-- menu component -->
+							<ul class="menu" id="dates">
+							</ul>
+						</div>
+					</div>
+					<div class="column col-4">
+						<div class="dropdown">
+							<a href="#" class="btn dropdown-toggle" tabindex="0">
+								Time<i class="icon icon-caret"></i>
+							</a>
+							<!-- menu component -->
+							<ul class="menu" id="timeOfDay">
+							</ul>
+						</div>
+					</div>
 				</div>
-				<div class="cluster-predict">
-					<div class='columns'>
-						<div class="form-group cluster column col-6">
-							<span class="label label-rounded label-primary">Cluster with:</span>
-							<label class="form-radio">
-								<input type="radio" name="cluster-method"  value='Naive' checked>
-								<i class="form-icon"></i> Naive Clustering
-							</label>
-							<div>
-								<div class='grid-div float-left'>
-									<label>Precision of grid</label>
-									<br/>
-									<input type='number' id='grid-x' name='grid-x' font='sans-serif' value='16' min='0' max='1000' step='2'></input>
-									<span> x </span>
-									<input type='number' id='grid-y' name='grid-y' font='sans-serif' value='16' min='0' max='1000' step='2'></input>
-									<br/>
-								</div>
-								<div class='clearfix'></div>
-								<div class='threshold-div'>
-									<label>Threshold </label>
-									<br/>
-									<input type='number' id='threshold' name='threshold' font='sans-serif' value='1000' min='0' max='100000' step='100'></input>
-									<br/>
-								</div>
+			</div>
+			<div class="cluster-predict">
+				<div class='columns'>
+					<div class="form-group cluster column col-6">
+						<span class="label label-rounded label-primary">Cluster with:</span>
+						<label class="form-radio">
+							<input type="radio" name="cluster-method" value='Naive' checked>
+							<i class="form-icon"></i> Naive Clustering
+						</label>
+						<div>
+							<div class='grid-div float-left'>
+								<label>Precision of grid</label>
+								<br />
+								<input type='number' id='grid-x' name='grid-x' font='sans-serif' value='16' min='0'
+									max='1000' step='2'></input>
+								<span> x </span>
+								<input type='number' id='grid-y' name='grid-y' font='sans-serif' value='16' min='0'
+									max='1000' step='2'></input>
+								<br />
 							</div>
-							<br/>
-							<!-- <div class="divider text-center" data-content="OR"></div>
+							<div class='clearfix'></div>
+							<div class='threshold-div'>
+								<label>Threshold </label>
+								<br />
+								<input type='number' id='threshold' name='threshold' font='sans-serif' value='1000'
+									min='0' max='100000' step='100'></input>
+								<br />
+							</div>
+						</div>
+						<br />
+						<!-- <div class="divider text-center" data-content="OR"></div>
 							<label class="form-radio">
 								<input type="radio" name="cluster-method"  value='DBSCAN'>
 								<i class="form-icon"></i> DBSCAN
@@ -106,71 +110,75 @@
 								<input class ='change' type='number' id='DBScanInput' name='DBScanInput' font='sans-serif' value='0.2' min='0.0' max='1' step='0.05'></input>
 								<br/>
 							</div> -->
-						</div>
-						<div class="form-group predict column col-6">
-							<span class="label label-rounded label-primary">Predict with:</span>
-							<div class="form-group">
-								<div class="columns">
-									<div class="periodsAhead column col-4">
-										<label>Periods Ahead</label>
-										<br/>
-										<input type='number' id='periods-ahead' name='periods-ahead' font='sans-serif' value='1' min='1' max='8' step='1'></input>
-										<br/>
-									</div>
-									<div class="metricIndex column col-4">
-										<label>Index Precision</label>
-										<br/>
-										<input type='number' id='metric-precision' name='metric-precision' font='sans-serif' value='12' min='4' max='40' step='4'></input>
-										<br/>
-									</div>
-									<div class="metricIndex column col-4">
-										<label>Index Max Value</label>
-										<br/>
-										<input type='number' id='metric-max' name='metric-max' font='sans-serif' value='40' min='4' max='500' step='10'></input>
-										<br/>
-									</div>
-								</div>
-								<label class="form-radio">
-									<input type="radio" name="prediction-method"  value='MM' checked>
-									<i class="form-icon"></i> Moving Mean (MM)
-								</label>
-								<label class="form-radio">
-									<input type="radio" name="prediction-method"  value="ARIMA">
-									<i class="form-icon"></i> Autoregressive Integrated Moving Average (ARIMA)
-								</label>
-								<label class="form-radio">
-									<input type="radio" name="prediction-method" value="LSTM">
-									<i class="form-icon"></i> Long Short-Term Memory (LSTM)
-								</label>
-								<label class="form-switch">
-									<input type="checkbox" class='retrain-model-checkbox'>
-									<i class="form-icon"></i> Retrain the model
-								  </label>
-							</div>
-						</div>
 					</div>
-					<div class='columns buttons'>
-						<div class='btn-div col-6'>
-							<button class="btn disabled cluster-button">Cluster</button>
-						</div>
-						<div class='btn-div col-4'>
-							<button class="btn disabled predict-button">Predict</button>
-						</div>
-						<div class='btn-div col-2'>
-							<button class="btn disabled clear-button"> Clear </button>
+					<div class="form-group predict column col-6">
+						<span class="label label-rounded label-primary">Predict with:</span>
+						<div class="form-group">
+							<div class="columns">
+								<div class="periodsAhead column col-4">
+									<label>Periods Ahead</label>
+									<br />
+									<input type='number' id='periods-ahead' name='periods-ahead' font='sans-serif'
+										value='1' min='1' max='8' step='1'></input>
+									<br />
+								</div>
+								<div class="metricIndex column col-4">
+									<label>Index Precision</label>
+									<br />
+									<input type='number' id='metric-precision' name='metric-precision' font='sans-serif'
+										value='12' min='4' max='40' step='4'></input>
+									<br />
+								</div>
+								<div class="metricIndex column col-4">
+									<label>Index Max Value</label>
+									<br />
+									<input type='number' id='metric-max' name='metric-max' font='sans-serif' value='40'
+										min='4' max='500' step='10'></input>
+									<br />
+								</div>
+							</div>
+							<label class="form-radio">
+								<input type="radio" name="prediction-method" value='MM' checked>
+								<i class="form-icon"></i> Moving Mean (MM)
+							</label>
+							<label class="form-radio">
+								<input type="radio" name="prediction-method" value="ARIMA">
+								<i class="form-icon"></i> Autoregressive Integrated Moving Average (ARIMA)
+							</label>
+							<label class="form-radio">
+								<input type="radio" name="prediction-method" value="LSTM">
+								<i class="form-icon"></i> Long Short-Term Memory (LSTM)
+							</label>
+							<label class="form-switch">
+								<input type="checkbox" class='retrain-model-checkbox'>
+								<i class="form-icon"></i> Retrain the model
+							</label>
 						</div>
 					</div>
 				</div>
-				<div class="result">
-					<div class="empty img-fit-cover d-visible">
-						<div class="empty-icon">
-							<i class="icon icon-photo"></i>
-						</div>
-						<p class="empty-title h5">You have no results.</p>
+				<div class='columns buttons'>
+					<div class='btn-div col-6'>
+						<button class="btn disabled cluster-button">Cluster</button>
+					</div>
+					<div class='btn-div col-4'>
+						<button class="btn disabled predict-button">Predict</button>
+					</div>
+					<div class='btn-div col-2'>
+						<button class="btn disabled clear-button"> Clear </button>
 					</div>
 				</div>
 			</div>
+			<div class="result">
+				<div class="empty img-fit-cover d-visible">
+					<div class="empty-icon">
+						<i class="icon icon-photo"></i>
+					</div>
+					<p class="empty-title h5">You have no results.</p>
+				</div>
+			</div>
 		</div>
-		<script type = "text/javascript" src = "./static/index.js"></script>
-	</body>
+	</div>
+	<script type="text/javascript" src="./static/index.js"></script>
+</body>
+
 </html>
