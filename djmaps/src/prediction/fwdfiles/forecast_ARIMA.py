@@ -9,27 +9,33 @@ from inspect import getsourcefile
 from .general_functions import savePredictions, saveParameters, getIfParametersExists
 # Compute predictions using Seasonal Moving Average Model
 
-def forecast_ARIMA(method, clusters, realCrimes, periodsAhead_list, gridshape, ignoreFirst, threshold, maxDist, isRetraining):
-    assert method in ['MA', 'AR', 'ARIMA']
+
+def forecast_ARIMA(method, clusters, realCrimes, periodsAhead_list, gridshape, ignoreFirst, threshold, maxDist, isRetraining, isModelEvaluation):
     print("Starting Predictions_{}".format(method))
-    cluster_size = len(clusters.Cluster.values)
+    cluster = clusters['Cluster']
+    cluster_size = len(cluster.keys())
     cluster_cntr = -1
     periodsAhead_cntr = -1
     test_size = len(realCrimes) // 3
-    forecasted_data = np.zeros(
-        (len(periodsAhead_list), cluster_size, test_size + periodsAhead_list[0]))
-    for c in clusters.Cluster.values:
+    if isModelEvaluation:
         # this step is added specifically for the django prediction tool
         # periodsAhead_list contains only one element in the app
-        test_size = len(realCrimes) // 3
-
+        test_size = len(next(iter(realCrimes.values()))) // 3
+    else:
+        # for the django prediction tool, predicts only the future data points (first set it to 0 for train/test split)
+        test_size = 0
+    forecasted_data = np.zeros(
+        (len(periodsAhead_list), cluster_size, test_size + 0 if isModelEvaluation else periodsAhead_list[0]))
+    for c in cluster.values():
         print("Predicting cluster {} with threshold {} using {}".format(
             c, threshold, method))
         cluster_cntr += 1
-        df = realCrimes['C{}_Crimes'.format(c)]
+        df = list(realCrimes['C{}_Crimes'.format(c)].values())
         # train test split
         train = df[:-test_size]
-        if train.sum() < 2:
+        if not isModelEvaluation:
+            test_size += periodsAhead_list[0]
+        if sum(train) < 2:
             continue
 
         pred_model = None
@@ -80,10 +86,6 @@ def forecast_ARIMA(method, clusters, realCrimes, periodsAhead_list, gridshape, i
                     endog=df, order=stepwise_model.order, enforce_stationarity=False, enforce_invertibility=False, hamilton_representation=False)
         coef_results = pred_model.fit(disp=0)
 
-        # this step is added specifically for the django prediction tool
-        # periodsAhead_list contains only one element in the app
-        test_size += periodsAhead_list[0]
-
         # for each predict horizon - `periodsAhead`, we perform rolling time series prediction with different window sizes
         # Note: the the `start` and the `end` defines the window and splits the observation and the "y_test"
         for periodsAhead in periodsAhead_list:
@@ -91,9 +93,14 @@ def forecast_ARIMA(method, clusters, realCrimes, periodsAhead_list, gridshape, i
             periodsAhead_cntr += 1
             predictions = np.zeros(test_size)
             for i in range(test_size):
-                pred = coef_results.get_prediction(
-                    start=i+len(train)-periodsAhead, end=i+len(train), dynamic=True)
-                predictions[i] = pred.predicted_mean.values[-1]
+                if isModelEvaluation:
+                    pred = coef_results.get_prediction(
+                        start=i+len(train)-periodsAhead, end=i+len(train), dynamic=True)
+                    predictions[i] = pred.predicted_mean[-1]
+                else:
+                    predictions = coef_results.get_prediction(
+                        start=len(train), end=periodsAhead_list[0]+len(train) - 1, dynamic=True).predicted_mean
+                    break
                 # history.append(pd.Series(test[i]), ignore_index=True)
 
             # apply the assumption that all predictions should be non-negative
@@ -112,4 +119,4 @@ def forecast_ARIMA(method, clusters, realCrimes, periodsAhead_list, gridshape, i
                                                                      for c in clusters.Cluster.values])
         forecasts.index = df[-test_size:].index
         return savePredictions(clusters, realCrimes, forecasts, method,
-                        gridshape, ignoreFirst, periodsAhead, threshold, maxDist)
+                               gridshape, ignoreFirst, periodsAhead, threshold, maxDist)

@@ -166,10 +166,10 @@ def clusterAndPredict(request):
 
     if method == "LSTM":
         result_path = forecast_LSTM(clusters=clusters, realCrimes=realCrimes,
-                                    periodsAhead_list=periodsAhead_list, gridshape=gridshape, ignoreFirst=ignoreFirst, threshold=threshold, maxDist=maxDist, isRetraining=isRetrainingModel)
+                                    periodsAhead_list=periodsAhead_list, gridshape=gridshape, ignoreFirst=ignoreFirst, threshold=threshold, maxDist=maxDist, isRetraining=isRetrainingModel, isModelEvaluation=isModelEvaluation)
     elif method == "ARIMA" or method == "AR":
         result_path = forecast_ARIMA(method=method, clusters=clusters, realCrimes=realCrimes,
-                                     periodsAhead_list=periodsAhead_list, gridshape=gridshape, ignoreFirst=ignoreFirst, threshold=threshold, maxDist=maxDist, isRetraining=isRetrainingModel)
+                                     periodsAhead_list=periodsAhead_list, gridshape=gridshape, ignoreFirst=ignoreFirst, threshold=threshold, maxDist=maxDist, isRetraining=isRetrainingModel, isModelEvaluation=isModelEvaluation)
     else:
         result_path = forecast_MM(method=method, clusters=clusters, realCrimes=realCrimes,
                                   periodsAhead_list=periodsAhead_list, gridshape=gridshape, ignoreFirst=ignoreFirst, threshold=threshold, maxDist=maxDist, isModelEvaluation=isModelEvaluation)
@@ -193,7 +193,7 @@ def clusterAndPredict(request):
     # with open(image_path, "rb") as imageFile:
     #     image_data = base64.b64encode(imageFile.read())
 
-    image_data = None # temporary holder
+    image_data = None  # temporary holder
     response = HttpResponse(pd.io.json.dumps(
         [crimesPredictedPerCluster, image_data]))
     response['Access-Control-Allow-Origin'] = '*'

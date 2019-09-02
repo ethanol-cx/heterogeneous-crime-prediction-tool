@@ -591,7 +591,6 @@ function addClusterLayersFromBoundaries(data, map) {
 function cluster(map) {
     removeExistingClusterLayers(map);
     removeExistingPredictionLayer(map);
-    clustered = false;
     const x = updateFilteredPoints();
 
     $('.cluster-button')[0].classList.add('loading');
@@ -670,6 +669,7 @@ function predictButtonHookUp(map) {
     $('.predict-button').click(function () {
         $('.predict-button')[0].classList.add('loading');
         $('.predict-button')[0].classList.add('loading-lrg');
+        debugger;
         if (!clustered) {
             cluster(map);
         }
