@@ -143,7 +143,8 @@ def compute_resource_allocation(resource_indexes, cell_coverage_units, gridshape
                     file = os.path.abspath("results/{}/{}_predictions_grid({},{})_ignore({})_ahead({})_threshold({})_dist({}).pkl".format(
                         method, method, gridshape[0], gridshape[1], ignoreFirst, periodsAhead, threshold, dist))
                     clusters, realCrimes, forecasts = pd.read_pickle(file)
-
+                    clusters = pd.DataFrame.from_dict(clusters)
+                    realCrimes = pd.DataFrame.from_dict(realCrimes)
                     # this step is added specifically for the django prediction tool
                     # periodsAhead_list contains only one element in the app
                     forecasts = forecasts[: - periodsAhead_list[0]]

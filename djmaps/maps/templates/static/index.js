@@ -725,9 +725,7 @@ function evaluateButtonHookUp(thresholds, gridshapes, resource_indexes, methods)
                     $('.empty')[0].remove();
                 }
                 $('.result')[0].innerHTML = `<img src="data:image/png;base64, ${imageData}"/>`
-                $('.predict-button')[0].classList.remove('loading');
-                $('.clear-button')[0].classList.remove('disabled');
-
+                $('.evaluate-button')[0].classList.remove('loading');
             },
             fail: (xhr, textStatus, errorThrown) => {
                 alert(`request failed with textStatus: ${textStatus} and error:

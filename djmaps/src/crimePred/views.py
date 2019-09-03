@@ -232,16 +232,17 @@ def evaluate(request):
                 else:
                     result_path = forecast_MM(method=method, clusters=clusters, realCrimes=realCrimes,
                                               periodsAhead_list=periodsAhead_list, gridshape=gridshape, ignoreFirst=ignoreFirst, threshold=threshold, maxDist=maxDist, isModelEvaluation=isModelEvaluation)
-                clusters, _, forecasts = pd.read_pickle(result_path)
                 compute_resource_allocation(resource_indexes, 1, [gridshape], periodsAhead_list, ignoreFirst, [
                     threshold], 1, [method], lon_min, lon_max, lat_min, lat_max)
     fig, ax = plt.subplots(
         1, len(methods), figsize=(18, 5), sharey=True)
+    if len(methods) == 1:
+        ax = [ax]
     plot_resource_allocation(
         ax, gridshapes, periodsAhead_list[0], thresholds, methods, ignoreFirst)
     os.makedirs(os.path.abspath("results/"), exist_ok=True)
     os.makedirs(os.path.abspath(
-                "results/plot"), exist_ok=True)
+                "results/plots"), exist_ok=True)
     image_path = os.path.abspath(
         'results/plots/{}-week-ahead.png'.format(periodsAhead_list[0]))
     plt.savefig(image_path, dpi=300)
