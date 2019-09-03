@@ -7,7 +7,10 @@ import sys
 import os
 from inspect import getsourcefile
 from .general_functions import savePredictions, saveParameters, getIfParametersExists
-# Compute predictions using Seasonal Moving Average Model
+
+# `isModelEvaluation` is a temporary solution for predicting outside of test data / actual prediction. This is due to the difference below:
+# In model evaluation, the regression is: given  t[i-periodsAhead-lookback+1:i-periodsAhead+1], predict t[i]
+# In actual prediction, the regression is: given t[i-periodsAhead-lookback+1:i-periodsAhead+1], predict t[i-periodsAhead+1:i+1]
 
 
 def forecast_ARIMA(method, clusters, realCrimes, periodsAhead_list, gridshape, ignoreFirst, threshold, maxDist, isRetraining, isModelEvaluation):
@@ -16,16 +19,16 @@ def forecast_ARIMA(method, clusters, realCrimes, periodsAhead_list, gridshape, i
     cluster_size = len(cluster.keys())
     cluster_cntr = -1
     periodsAhead_cntr = -1
-    test_size = len(realCrimes) // 3
+    test_size = 0
     if isModelEvaluation:
         # this step is added specifically for the django prediction tool
         # periodsAhead_list contains only one element in the app
         test_size = len(next(iter(realCrimes.values()))) // 3
     else:
         # for the django prediction tool, predicts only the future data points (first set it to 0 for train/test split)
-        test_size = 0
+        test_size = periodsAhead_list[0]
     forecasted_data = np.zeros(
-        (len(periodsAhead_list), cluster_size, test_size + 0 if isModelEvaluation else periodsAhead_list[0]))
+        (len(periodsAhead_list), cluster_size, test_size))
     for c in cluster.values():
         print("Predicting cluster {} with threshold {} using {}".format(
             c, threshold, method))
@@ -34,7 +37,7 @@ def forecast_ARIMA(method, clusters, realCrimes, periodsAhead_list, gridshape, i
         # train test split
         train = df[:-test_size]
         if not isModelEvaluation:
-            test_size += periodsAhead_list[0]
+            train = df
         if sum(train) < 2:
             continue
 
@@ -62,12 +65,12 @@ def forecast_ARIMA(method, clusters, realCrimes, periodsAhead_list, gridshape, i
             if method == 'MA' or method == 'ARIMA':
                 q_start = 0
                 Q_start = 0
-                q_max = 5
+                q_max = 10
                 Q_max = 1
             if method == 'AR' or method == 'ARIMA':
                 p_start = 0
                 P_start = 0
-                p_max = 5
+                p_max = 10
                 P_max = 1
 
             # get the optimal combination of the hyperparameters through stepwise search given that we had only the training data
@@ -116,7 +119,7 @@ def forecast_ARIMA(method, clusters, realCrimes, periodsAhead_list, gridshape, i
     for i in range(len(periodsAhead_list)):
         periodsAhead = periodsAhead_list[i]
         forecasts = pd.DataFrame(data=forecasted_data[i].T, columns=['C{}_Forecast'.format(c)
-                                                                     for c in clusters.Cluster.values])
-        forecasts.index = df[-test_size:].index
+                                                                     for c in cluster.values()])
+        # forecasts.index = df[-test_size:].index
         return savePredictions(clusters, realCrimes, forecasts, method,
                                gridshape, ignoreFirst, periodsAhead, threshold, maxDist)

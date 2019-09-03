@@ -159,7 +159,7 @@ def clusterAndPredict(request):
     maxDist = 1
     ignoreFirst = 225
     periodsAhead_list = [int(body['periodsAhead'])]
-    isRetrainingModel = True if body['retrainModel'] == 'on' else False
+    isRetrainingModel = body['retrainModel']
     isModelEvaluation = False
     clusters = body['clusters']
     realCrimes = body['realCrimes']

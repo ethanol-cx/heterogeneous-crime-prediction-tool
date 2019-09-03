@@ -47,29 +47,37 @@ def load_LSTM_model(look_back, batch_size):
     model.compile(loss='mean_squared_error', optimizer='adam')
     return model
 
+# `isModelEvaluation` is a temporary solution for predicting outside of test data / actual prediction. This is due to the difference below:
+# In model evaluation, the regression is: given  t[i-periodsAhead-lookback+1:i-periodsAhead+1], predict t[i]
+# In actual prediction, the regression is: given t[i-periodsAhead-lookback+1:i-periodsAhead+1], predict t[i-periodsAhead+1:i+1]
 
-def forecast_LSTM(clusters, realCrimes, periodsAhead_list, gridshape, ignoreFirst, threshold, maxDist, isRetraining):
+
+def forecast_LSTM(clusters, realCrimes, periodsAhead_list, gridshape, ignoreFirst, threshold, maxDist, isRetraining, isModelEvaluation):
     np.random.seed(23)
     scaler = MinMaxScaler(feature_range=(0, 1))
-    cluster_size = len(clusters.Cluster.values)
+    cluster = clusters['Cluster']
+    cluster_size = len(cluster.keys())
     cluster_cntr = -1
     periodsAhead_cntr = -1
     test_size = len(realCrimes) // 3
+    if isModelEvaluation:
+        # this step is added specifically for the django prediction tool
+        # periodsAhead_list contains only one element in the app
+        test_size = len(next(iter(realCrimes.values()))) // 3
+    else:
+        # for the django prediction tool, predicts only the future data points (first set it to 0 for train/test split)
+        test_size = periodsAhead_list[0]
     forecasted_data = np.zeros(
-        (len(periodsAhead_list), cluster_size, test_size + periodsAhead_list[0]))
+        (len(periodsAhead_list), cluster_size, test_size))
     look_back = 3
     batch_size = 1
     model = load_LSTM_model(look_back, batch_size)
 
-    for c in clusters.Cluster.values:
-        # this step is added specifically for the django prediction tool
-        # periodsAhead_list contains only one element in the app
-        test_size = len(realCrimes) // 3
-
+    for c in cluster.values():
         print("Predicting cluster {} with threshold {} using LSTM".format(
             c, threshold))
         cluster_cntr += 1
-        df = realCrimes['C{}_Crimes'.format(c)]
+        df = list(realCrimes['C{}_Crimes'.format(c)].values())
         df = scaler.fit_transform(np.array(df).reshape(-1, 1))
         X, y = create_X_y(df, look_back)
 
@@ -98,11 +106,8 @@ def forecast_LSTM(clusters, realCrimes, periodsAhead_list, gridshape, ignoreFirs
         # invert predictions
         trainPredict = scaler.inverse_transform(trainPredict)
         y_train = scaler.inverse_transform(y_train)
-        y_test = scaler.inverse_transform(y_test)
-
-        # this step is added specifically for the django prediction tool
-        # periodsAhead_list contains only one element in the app
-        test_size += periodsAhead_list[0]
+        if isModelEvaluation:
+            y_test = scaler.inverse_transform(y_test)
 
         # for each predict horizon - `periodsAhead`, we perform recursive multi-step timeseries prediction with different timesteps ahead
         # Note: the the `start` and the `end` defines the window and splits the observation and the "y_test"
@@ -115,10 +120,15 @@ def forecast_LSTM(clusters, realCrimes, periodsAhead_list, gridshape, ignoreFirs
             # start from the first row of the features
             for i in range(test_size):
                 X_test_i = X_test[i].reshape(1, -1, 1)
-                for _ in range(periodsAhead):
+                for j in range(periodsAhead):
                     pred = model.predict(X_test_i, batch_size=1)
                     X_test_i = np.append(
                         X_test_i[:, 1:, :][0], pred[-1]).reshape(1, -1, 1)
+                    if not isModelEvaluation:
+                        # pred[0] == pred[-1]: it contains one data `pred_i`
+                        testPredict[j] = pred[-1]
+                if not isModelEvaluation:
+                    break
                 testPredict[i] = pred[-1]  # it contains one data: `pred_i`
 
             testPredict = scaler.inverse_transform(testPredict.reshape(-1, 1))
@@ -141,6 +151,6 @@ def forecast_LSTM(clusters, realCrimes, periodsAhead_list, gridshape, ignoreFirs
     for i in range(len(periodsAhead_list)):
         periodsAhead = periodsAhead_list[i]
         forecasts = pd.DataFrame(data=forecasted_data[i].T, columns=['C{}_Forecast'.format(c)
-                                                                     for c in clusters.Cluster.values])
+                                                                     for c in cluster.values()])
         return savePredictions(clusters, realCrimes, forecasts, 'LSTM',
                                gridshape, ignoreFirst, periodsAhead, threshold, maxDist)

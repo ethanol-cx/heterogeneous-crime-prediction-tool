@@ -9,7 +9,6 @@ let timeCommitted = new Set();
 let ctCommitted = new Set();
 let colorArr = new Array();
 let approximateCentroidsForClusters = new Array();
-let clustered = false;
 let clusters;
 let realCrimes;
 // let dbPredict = [];
@@ -584,7 +583,7 @@ function addClusterLayersFromBoundaries(data, map) {
             }
         }
         addClusterLayer(clusterID, points, colorArr[2 * i + 3], map);
-        console.log(colorArr[2 * i + 3], points)
+        // console.log(colorArr[2 * i + 3], points)
     }
 }
 
@@ -613,13 +612,11 @@ function cluster(map) {
             data = JSON.parse(data);
             [border_result, crime_counts, clusters, realCrimes] = data;
             addClusterLayersFromBoundaries(border_result, map);
-            clustered = true;
             $('.cluster-button')[0].classList.remove('loading'); //clear the loading spinner for cluster
         },
         fail: (xhr, textStatus, errorThrown) => {
             alert(`request failed with textStatus: ${textStatus} and error:
             ${errorThrown}`);
-            clustered = false;
             $('.cluster-button')[0].classList.remove('loading');
         }
     });
@@ -647,6 +644,7 @@ function addPredictedNumbersToMap(crimesPredicted, map) {
         });
     });
     predictedCountsData['features'] = features;
+    removeExistingPredictionLayer(map);
     map.addSource('prediction-result-sum', {
         type: 'geojson',
         data: predictedCountsData
@@ -669,8 +667,7 @@ function predictButtonHookUp(map) {
     $('.predict-button').click(function () {
         $('.predict-button')[0].classList.add('loading');
         $('.predict-button')[0].classList.add('loading-lrg');
-        debugger;
-        if (!clustered) {
+        if (!clusters) {
             cluster(map);
         }
         const x = updateFilteredPoints();
@@ -686,7 +683,7 @@ function predictButtonHookUp(map) {
                 threshold: $('#threshold').val(),
                 metricPrecision: $('#metric-precision').val(),
                 metricMax: $('#metric-max').val(),
-                retrainModel: $('.retrain-model-checkbox').val(),
+                retrainModel: $('.retrain-model-checkbox').prop('checked'),
                 clusters,
                 realCrimes
             }),
@@ -697,7 +694,6 @@ function predictButtonHookUp(map) {
                     $('.empty')[0].remove();
                 }
                 $('.result')[0].innerHTML += `<img src="data:image/png;base64, ${imageData}"/>`
-                clustered = false;
                 $('.predict-button')[0].classList.remove('loading');
                 $('.clear-button')[0].classList.remove('disabled');
             },
