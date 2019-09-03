@@ -1,6 +1,8 @@
 {
     "methods": [
-        "MM"
+        "MM",
+        "ARIMA",
+        "LSTM"
     ],
     "thresholds": [
         2000

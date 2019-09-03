@@ -56,7 +56,8 @@ body{
 }
 
 .result img{
-	height: 70%;
+	height: 200%;
+	width: auto;
 }
 
 #grid-x{

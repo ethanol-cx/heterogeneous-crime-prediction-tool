@@ -689,6 +689,7 @@ function predictButtonHookUp(map) {
             success: (response) => {
                 const crimesPredicted = JSON.parse(response);
                 addPredictedNumbersToMap(crimesPredicted, map);
+                $('.predict-button')[0].classList.remove('disabled');
             },
             fail: (xhr, textStatus, errorThrown) => {
                 alert(`request failed with textStatus: ${textStatus} and error:
