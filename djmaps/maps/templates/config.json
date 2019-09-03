@@ -1,0 +1,18 @@
+{
+    "methods": [
+        "MM"
+    ],
+    "thresholds": [
+        2000
+    ],
+    "gridshapes": [
+        [
+            20,
+            20
+        ]
+    ],
+    "resource_indexes": [
+        0,
+        50
+    ]
+}

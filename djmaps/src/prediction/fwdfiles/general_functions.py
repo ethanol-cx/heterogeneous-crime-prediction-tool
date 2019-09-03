@@ -15,6 +15,7 @@ from math import radians, cos, sin, asin, sqrt
 import base64
 from ..fwdfiles.resourceAllocation_functions import fixResourceAvailable
 
+
 def getBorderCordinates(lon_max, lon_min, lat_max, lat_min, gridshape, i, j):
     """Given the cell number i and j, return the borders of the cell. Each
     border is represented as a tuple (lon1, lat1, lon2, lat2). The borders
@@ -83,9 +84,10 @@ def savePredictions(clusters, realCrimes, forecasts, method,
     output.close()
     return fileName
 
+
 def saveParameters(orders, seasonal_orders, method,
                    gridshape, cluster_id, ignoreFirst,
-                   threshold, maxDist):
+                   threshold, maxDist, modelName=''):
     # save it to disk
     os.makedirs(os.path.abspath("parameters/"), exist_ok=True)
     os.makedirs(os.path.abspath("parameters/{}".format(method)), exist_ok=True)
@@ -94,6 +96,9 @@ def saveParameters(orders, seasonal_orders, method,
             method, method, *gridshape, cluster_id, ignoreFirst, threshold, maxDist
         )
     )
+    if modelName:
+        fileName = os.path.abspath(
+            "parameters/{}/{}_{}_cluster({}).pkl".format(method, method, modelName, cluster_id))
     output = open(fileName, 'wb')
     pickle.dump((orders, seasonal_orders), output)
     output.close()
@@ -104,9 +109,14 @@ def getAreaFromLatLon(lon1, lon2, lat1, lat2):
     return (math.pi / 180) * 10 ** 6 * math.fabs(math.sin(lat1) - math.sin(lat2)) * math.fabs(lon1-lon2)
 
 
-def getIfParametersExists(method, gridshape, cluster_id, ignoreFirst, threshold, maxDist):
-    if Path("parameters/{}/{}_parameters_grid({},{})_cluster({})_ignore({})_threshold({})_dist({}).pkl".format(method, method, *gridshape, cluster_id, ignoreFirst, threshold, maxDist)).is_file():
-        return pd.read_pickle("parameters/{}/{}_parameters_grid({},{})_cluster({})_ignore({})_threshold({})_dist({}).pkl".format(method, method, *gridshape, cluster_id, ignoreFirst, threshold, maxDist))
+def getIfParametersExists(method, gridshape, cluster_id, ignoreFirst, threshold, maxDist, modelName=''):
+    fileName = "parameters/{}/{}_parameters_grid({},{})_cluster({})_ignore({})_threshold({})_dist({}).pkl".format(
+        method, method, *gridshape, cluster_id, ignoreFirst, threshold, maxDist)
+    if modelName:
+        fileName = 'parameters/{}/{}_{}_{}.pkl'.format(
+            method, method, modelName, cluster_id)
+    if Path(fileName).is_file():
+        return pd.read_pickle(fileName)
     return None
 
 
@@ -133,11 +143,11 @@ def compute_resource_allocation(resource_indexes, cell_coverage_units, gridshape
                     file = os.path.abspath("results/{}/{}_predictions_grid({},{})_ignore({})_ahead({})_threshold({})_dist({}).pkl".format(
                         method, method, gridshape[0], gridshape[1], ignoreFirst, periodsAhead, threshold, dist))
                     clusters, realCrimes, forecasts = pd.read_pickle(file)
-                    
+
                     # this step is added specifically for the django prediction tool
                     # periodsAhead_list contains only one element in the app
                     forecasts = forecasts[: - periodsAhead_list[0]]
-                    
+
                     unit_area = getAreaFromLatLon(
                         lon1=lon_min, lon2=lon_max, lat1=lat_min, lat2=lat_max) / (gridshape[0] * gridshape[1])
                     scores = fixResourceAvailable(resource_indexes, forecasts, realCrimes, clusters, cell_coverage_units, unit_area).rename(

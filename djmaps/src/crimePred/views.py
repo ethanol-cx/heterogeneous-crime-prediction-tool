@@ -12,6 +12,7 @@ import pandas as pd
 import pickle
 import subprocess
 import base64
+import matplotlib.pyplot as plt
 
 lon_min = -118.297
 lon_max = -118.27
@@ -148,14 +149,30 @@ def heterogeneousCluster(request):
     return resp
 
 
-def clusterAndPredict(request):
+def plot_resource_allocation(ax, gridshapes, periodsAhead, thresholds, methods, ignoreFirst):
+    for i in range(len(methods)):
+        method = methods[i]
+        ax[i].set_ylabel('fractions of crimes avoided')
+        for threshold in thresholds:
+            for gridshape in gridshapes:
+                file = os.path.abspath("results/resource_allocation/{}_{}_({}x{})({})_{}_ahead.pkl".format(
+                    'LA' if ignoreFirst == 104 else 'USC', method, gridshape[0], gridshape[1], threshold, periodsAhead))
+                with open(file, "rb") as ifile:
+                    result = pickle.load(ifile)
+                if threshold != 0:
+                    ax[i].plot(result, marker='o', alpha=0.85)
+                    ax[i].legend()
+                    continue
+                ax[i].plot(result, alpha=0.85)
+                ax[i].legend()
+
+
+def predict(request):
     body_unicode = request.body.decode('utf-8')
     body = json.loads(body_unicode)
     gridshape = tuple((int(body['grid-x']), int(body['grid-y'])))
     method = body['method']
     threshold = int(body['threshold'])
-    metricPrecision = int(body['metricPrecision'])
-    metricMax = int(body['metricMax'])
     maxDist = 1
     ignoreFirst = 225
     periodsAhead_list = [int(body['periodsAhead'])]
@@ -163,133 +180,74 @@ def clusterAndPredict(request):
     isModelEvaluation = False
     clusters = body['clusters']
     realCrimes = body['realCrimes']
+    modelName = body['modelName']
 
     if method == "LSTM":
         result_path = forecast_LSTM(clusters=clusters, realCrimes=realCrimes,
-                                    periodsAhead_list=periodsAhead_list, gridshape=gridshape, ignoreFirst=ignoreFirst, threshold=threshold, maxDist=maxDist, isRetraining=isRetrainingModel, isModelEvaluation=isModelEvaluation)
+                                    periodsAhead_list=periodsAhead_list, gridshape=gridshape, ignoreFirst=ignoreFirst, threshold=threshold, maxDist=maxDist, isRetraining=isRetrainingModel, isModelEvaluation=isModelEvaluation, modelName=modelName)
     elif method == "ARIMA" or method == "AR":
         result_path = forecast_ARIMA(method=method, clusters=clusters, realCrimes=realCrimes,
-                                     periodsAhead_list=periodsAhead_list, gridshape=gridshape, ignoreFirst=ignoreFirst, threshold=threshold, maxDist=maxDist, isRetraining=isRetrainingModel, isModelEvaluation=isModelEvaluation)
+                                     periodsAhead_list=periodsAhead_list, gridshape=gridshape, ignoreFirst=ignoreFirst, threshold=threshold, maxDist=maxDist, isRetraining=isRetrainingModel, isModelEvaluation=isModelEvaluation, modelName=modelName)
     else:
         result_path = forecast_MM(method=method, clusters=clusters, realCrimes=realCrimes,
-                                  periodsAhead_list=periodsAhead_list, gridshape=gridshape, ignoreFirst=ignoreFirst, threshold=threshold, maxDist=maxDist, isModelEvaluation=isModelEvaluation)
+                                  periodsAhead_list=periodsAhead_list, gridshape=gridshape, ignoreFirst=ignoreFirst, threshold=threshold, maxDist=maxDist, isModelEvaluation=isModelEvaluation, modelName=modelName)
 
     clusters, _, forecasts = pd.read_pickle(result_path)
     crimesPredictedPerCluster = [
         round(sum(forecasts[columnName][-periodsAhead_list[0]:]), 3) for columnName in forecasts]
-    # resource_indexes = range(0, metricMax, metricPrecision)
-    # file_path = compute_resource_allocation(resource_indexes, 1, [gridshape], periodsAhead_list, ignoreFirst, [
-    #                                         threshold], 1, [method], lon_min, lon_max, lat_min, lat_max)
-
-    # filename = "{}_{}_({}x{})({})_{}_ahead.png".format('LA' if ignoreFirst == 104 else 'USC',
-    #                                                    method, gridshape[0], gridshape[1], threshold, periodsAhead_list[0])
-    # os.makedirs(os.path.abspath("results/"), exist_ok=True)
-    # os.makedirs(os.path.abspath(
-    #     "results/plot"), exist_ok=True)
-    # image_path = os.path.abspath('results/plot/{}').format(filename)
-
-    # subprocess.run(['python3', os.path.abspath(
-    #     'djmaps/plotResult.py'), file_path, image_path])
-    # with open(image_path, "rb") as imageFile:
-    #     image_data = base64.b64encode(imageFile.read())
-
-    image_data = None  # temporary holder
     response = HttpResponse(pd.io.json.dumps(
-        [crimesPredictedPerCluster, image_data]))
+        crimesPredictedPerCluster))
     response['Access-Control-Allow-Origin'] = '*'
     response.status_code = 200
     return response
 
-# def predict(request):
-#     body_unicode = request.body.decode('utf-8')
-#     body = json.loads(body_unicode)
 
-#     timeseries = body['timeseries']
-#     method = body['method']
-#     periodsAhead_list = body['periodsAhead_list']
-#     name = body['name']
-#     gridshape = "NONE" if not 'gridshape' in body else body['gridshape']
-#     ignoreFirst = "NONE" if not 'ignoreFirst' in body else body['ignoreFirst']
-#     threshold = "NONE" if not 'threshold' in body else body['threshold']
-
-#     if threshold and threshold != 0:
-#         max_dist = 1
-#     else:
-#         max_dist = 0
-
-#     forecasted_data = np.zeros(
-#         (len(periodsAhead_list), 1, len(timeseries) // 3))
-
-#     if method == 'MM':
-#         forecast_timeseries_MM(timeseries, forecasted_data, 0,
-#                                periodsAhead_list, gridshape, ignoreFirst, threshold, max_dist)
-#     elif method == "ARIMA":
-#         forecast_timeseries_ARIMA(timeseries, forecasted_data, 0, 0,
-#                                   periodsAhead_list, gridshape, ignoreFirst, threshold, max_dist)
-#     elif method == "LSTM":
-#         model = load_LSTM_model(10, 1)
-#         forecast_timeseries_LSTM(model, timeseries, forecasted_data, 10, 1,
-#                                  0, 0, periodsAhead_list, gridshape, ignoreFirst, threshold, max_dist, name)
-#     else:
-#         response = HttpResponse(
-#             'Wrong dataset. Should choose from \'dps\' or \'la\'')
-#         response.status_code = 422
-#         return response
-
-#     response = HttpResponse(pd.io.json.dumps(forecasted_data.reshape(
-#         -1, len(timeseries) // 3)))
-#     response.status_code = 200
-#     return response
-
-
-# def cluster(request, dataset, gridshape, threshold):
-#     if dataset == 'dps':
-#         data = pd.read_pickle(os.path.abspath(
-#             './prediction/dataset/DPSUSC.pkl'))
-#         ignoreFirst = 225
-#     elif dataset == 'la':
-#         data = pd.read_pickle(os.path.abspath(
-#             './prediction/dataset/LAdata.pkl'))
-#         ignoreFirst = 104
-#     else:
-#         response = HttpResponse(
-#             'Wrong dataset. Should choose from \'dps\' or \'la\'')
-#         response.status_code = 422
-#         response['Access-Control-Allow-Origin'] = '*'
-#         return response
-#     try:
-#         clusters, realCrimes = computeClustersAndOrganizeData(
-#             data, gridshape, ignoreFirst, threshold, 1)
-#         border_result = []
-#         crime_counts = []
-#         for geometry in clusters.Geometry:
-#             num_of_crimes = 0
-#             geometry_array = geometry.toarray()
-#             border_set = set()
-#             for i in range(len(geometry_array)):
-#                 row = geometry_array[i]
-#                 for j in range(len(row)):
-#                     if row[j] == 0:
-#                         continue
-#                     borders = getBorderCordinates(
-#                         lon_max, lon_min, lat_max, lat_min, gridshape, i, j)
-#                     for border in borders:
-#                         if border not in border_set:
-#                             border_set.add(border)
-#                         else:
-#                             border_set.remove(border)
-#                     num_of_crimes += row[j]
-#             border_result.append(list(border_set))
-#             crime_counts.append(num_of_crimes)
-#             num_of_crimes = 0
-#         response = HttpResponse(pd.io.json.dumps(
-#             [border_result, crime_counts]))
-#         response.status_code = 200
-#         response['Access-Control-Allow-Origin'] = '*'
-#         return response
-#     except:
-#         response = HttpResponse('Internal server error with the followint inputs:\ndataset: {}, gridshape: {}, threshold: {}'.format(
-#             dataset, gridshape, threshold))
-#         response.status_code = 400
-#         response['Access-Control-Allow-Origin'] = '*'
-#         return response
+def evaluate(request):
+    maxDist = 1
+    ignoreFirst = 225
+    isModelEvaluation = True
+    body_unicode = request.body.decode('utf-8')
+    body = json.loads(body_unicode)
+    periodsAhead_list = [int(body['periodsAhead'])]
+    isRetrainingModel = True
+    features = body['features']
+    data = convertFromFeaturesToData(features)
+    thresholds = body['thresholds']
+    gridshapes = [tuple(gridshape) for gridshape in body['gridshapes']]
+    methods = body['methods']
+    resource_indexes = body['resource_indexes']
+    for gridshape in gridshapes:
+        for threshold in thresholds:
+            clusters, realCrimes = computeClustersAndOrganizeData(
+                data, gridshape, ignoreFirst, threshold, 1)
+            clusters = clusters.to_dict()
+            realCrimes = realCrimes.to_dict()
+            for method in methods:
+                if method == "LSTM":
+                    result_path = forecast_LSTM(clusters=clusters, realCrimes=realCrimes,
+                                                periodsAhead_list=periodsAhead_list, gridshape=gridshape, ignoreFirst=ignoreFirst, threshold=threshold, maxDist=maxDist, isRetraining=isRetrainingModel, isModelEvaluation=isModelEvaluation)
+                elif method == "ARIMA" or method == "AR":
+                    result_path = forecast_ARIMA(method=method, clusters=clusters, realCrimes=realCrimes,
+                                                 periodsAhead_list=periodsAhead_list, gridshape=gridshape, ignoreFirst=ignoreFirst, threshold=threshold, maxDist=maxDist, isRetraining=isRetrainingModel, isModelEvaluation=isModelEvaluation)
+                else:
+                    result_path = forecast_MM(method=method, clusters=clusters, realCrimes=realCrimes,
+                                              periodsAhead_list=periodsAhead_list, gridshape=gridshape, ignoreFirst=ignoreFirst, threshold=threshold, maxDist=maxDist, isModelEvaluation=isModelEvaluation)
+                clusters, _, forecasts = pd.read_pickle(result_path)
+                compute_resource_allocation(resource_indexes, 1, [gridshape], periodsAhead_list, ignoreFirst, [
+                    threshold], 1, [method], lon_min, lon_max, lat_min, lat_max)
+    fig, ax = plt.subplots(
+        1, len(methods), figsize=(18, 5), sharey=True)
+    plot_resource_allocation(
+        ax, gridshapes, periodsAhead_list[0], thresholds, methods, ignoreFirst)
+    os.makedirs(os.path.abspath("results/"), exist_ok=True)
+    os.makedirs(os.path.abspath(
+                "results/plot"), exist_ok=True)
+    image_path = os.path.abspath(
+        'results/plots/{}-week-ahead.png'.format(periodsAhead_list[0]))
+    plt.savefig(image_path, dpi=300)
+    with open(image_path, "rb") as imageFile:
+        image_data = base64.b64encode(imageFile.read())
+    response = HttpResponse(pd.io.json.dumps(image_data))
+    response['Access-Control-Allow-Origin'] = '*'
+    response.status_code = 200
+    return response

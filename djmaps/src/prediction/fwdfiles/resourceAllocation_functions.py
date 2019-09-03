@@ -87,8 +87,8 @@ def computeRelativeStoppedCrime(forecasts, realCrimes, clusters, cell_coverage_u
 
 def fixResourceAvailable(resource_indexes, forecasts, realCrimes, clusters, cell_coverage_units, unit_area):
     # sort clusters by minimum area
-    clusters['Area'] = clusters['Geometry'].map(
-        lambda g: g.data.size * unit_area)
+    clusters['Area'] = np.array(clusters['Geometry'].values()).map(
+        lambda g: len(g) * unit_area)
     clusters.sort_values(by=['Area', 'Crimes'], ascending=[
                          True, False], inplace=True)
 

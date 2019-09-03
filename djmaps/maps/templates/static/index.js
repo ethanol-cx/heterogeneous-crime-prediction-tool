@@ -235,8 +235,6 @@ function mouseOnPointsEvent(popup, map) {
 							Latitude: ${Latitude} <br/>
 							Longitude: ${Longitude} <br/>
 							${e.features.length} incident(s) happened here.`;
-        // + "DBScan Cluster: " + e.features[0].properties[DBSCANdistance] + "<br>"
-        // + "LSTM Cluster: " + e.features[0].properties['lstmCluster'] + "<br>";
 
         // if (dbPredict.length > 0) {
         // 	dbPredictData = $.parseJSON(dbPredict);
@@ -673,7 +671,7 @@ function predictButtonHookUp(map) {
         const x = updateFilteredPoints();
         $.ajax({
             type: 'POST',
-            url: 'http://localhost:8000/crimePred/cluster-predict',
+            url: 'http://localhost:8000/crimePred/predict',
             data: JSON.stringify({
                 features: x,
                 periodsAhead: $('#periods-ahead').val(),
@@ -685,17 +683,12 @@ function predictButtonHookUp(map) {
                 metricMax: $('#metric-max').val(),
                 retrainModel: $('.retrain-model-checkbox').prop('checked'),
                 clusters,
-                realCrimes
+                realCrimes,
+                modelName: $('#model-name').val()
             }),
             success: (response) => {
-                const [crimesPredicted, imageData] = JSON.parse(response);
+                const crimesPredicted = JSON.parse(response);
                 addPredictedNumbersToMap(crimesPredicted, map);
-                if ($('.empty')[0]) {
-                    $('.empty')[0].remove();
-                }
-                $('.result')[0].innerHTML += `<img src="data:image/png;base64, ${imageData}"/>`
-                $('.predict-button')[0].classList.remove('loading');
-                $('.clear-button')[0].classList.remove('disabled');
             },
             fail: (xhr, textStatus, errorThrown) => {
                 alert(`request failed with textStatus: ${textStatus} and error:
@@ -705,6 +698,46 @@ function predictButtonHookUp(map) {
         });
     });
 }
+
+function evaluateButtonHookUp(thresholds, gridshapes, resource_indexes, methods) {
+    $('.evaluate-button')[0].classList.remove('disabled');
+    $('.evaluate-button').click(function () {
+        $('.evaluate-button')[0].classList.add('loading');
+        $('.evaluate-button')[0].classList.add('loading-lrg');
+        const x = updateFilteredPoints();
+        $.ajax({
+            type: 'POST',
+            url: 'http://localhost:8000/crimePred/evaluate',
+            data: JSON.stringify({
+                features: x,
+                periodsAhead: $('#periods-ahead').val(),
+                retrainModel: $('.retrain-model-checkbox').prop('checked'),
+                clusters,
+                realCrimes,
+                thresholds,
+                gridshapes,
+                methods,
+                resource_indexes
+            }),
+            success: (response) => {
+                const imageData = JSON.parse(response);
+                if ($('.empty')[0]) {
+                    $('.empty')[0].remove();
+                }
+                $('.result')[0].innerHTML = `<img src="data:image/png;base64, ${imageData}"/>`
+                $('.predict-button')[0].classList.remove('loading');
+                $('.clear-button')[0].classList.remove('disabled');
+
+            },
+            fail: (xhr, textStatus, errorThrown) => {
+                alert(`request failed with textStatus: ${textStatus} and error:
+                ${errorThrown}`);
+                $('.predict-button')[0].classList.remove('loading');
+            }
+        });
+    });
+}
+
 
 function clearPlotsButtonHookUp() {
     $('.clear-button').click(() => {
@@ -802,10 +835,39 @@ function loadmap() {
     submitFunctionHookUp(map);
     clusterButtonHookUp(map);
     predictButtonHookUp(map);
+    evaluationConfigFileUploadHookUp();
     clearPlotsButtonHookUp();
 }
 
-function handleFileSelect(evt) {
+handleEvaluationConfigUpload = (evt) => {
+    let files = evt.target.files; // FileList object
+
+    // files is a FileList of File objects. List some properties.
+    for (let i = 0, f; (f = files[i]); i++) {
+        let reader = new FileReader();
+
+        // Closure to capture the file information.
+        reader.onload = (function (theFile) {
+            return function (e) {
+                config = e.target.result;
+                try {
+                    configData = JSON.parse(config);
+                } catch (ex) {
+                    alert('ex when trying to parse json = ' + ex);
+                }
+                const { thresholds, gridshapes, resource_indexes, methods } = configData;
+                evaluateButtonHookUp(thresholds, gridshapes, resource_indexes, methods);
+            };
+        })(f);
+        reader.readAsText(f);
+    }
+}
+evaluationConfigFileUploadHookUp = () => {
+    $('.files')[1].classList.remove('disabled');
+    $('.files')[1].addEventListener('change', handleEvaluationConfigUpload, false);
+}
+
+function handleDataUpload(evt) {
     let files = evt.target.files; // FileList object
 
     // files is a FileList of File objects. List some properties.
@@ -830,7 +892,7 @@ function handleFileSelect(evt) {
 
 document
     .getElementsByClassName('files')[0]
-    .addEventListener('change', handleFileSelect, false);
+    .addEventListener('change', handleDataUpload, false);
 
 // $(document).ready(function () {
 // 	$("#DBPredict").click(function () {

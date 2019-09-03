@@ -20,7 +20,7 @@ def dynamic_ma_predictions(df, look_back, start, end):
 # In actual prediction, the regression is: given t[i-periodsAhead-lookback+1:i-periodsAhead+1], predict t[i-periodsAhead+1:i+1]
 
 
-def forecast_MM(method, clusters, realCrimes, periodsAhead_list, gridshape, ignoreFirst, threshold, maxDist, isModelEvaluation):
+def forecast_MM(method, clusters, realCrimes, periodsAhead_list, gridshape, ignoreFirst, threshold, maxDist, isModelEvaluation, modelName=''):
     print("Starting Predictions_{}".format(method))
     cluster = clusters['Cluster']
     cluster_size = len(cluster.keys())

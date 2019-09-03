@@ -8,5 +8,6 @@ register_converter(converters.gridShapeConverter, 'int,int')
 urlpatterns = [
     path('heterogeneous-cluster', views.heterogeneousCluster,
          name='heterogeneous-cluster'),
-    path('cluster-predict', views.clusterAndPredict, name='cluster-predict'),
+    path('predict', views.predict, name='predict'),
+    path('evaluate', views.evaluate, name='evaluate')
 ]

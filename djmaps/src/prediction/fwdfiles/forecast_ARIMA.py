@@ -13,7 +13,7 @@ from .general_functions import savePredictions, saveParameters, getIfParametersE
 # In actual prediction, the regression is: given t[i-periodsAhead-lookback+1:i-periodsAhead+1], predict t[i-periodsAhead+1:i+1]
 
 
-def forecast_ARIMA(method, clusters, realCrimes, periodsAhead_list, gridshape, ignoreFirst, threshold, maxDist, isRetraining, isModelEvaluation):
+def forecast_ARIMA(method, clusters, realCrimes, periodsAhead_list, gridshape, ignoreFirst, threshold, maxDist, isRetraining, isModelEvaluation, modelName=''):
     print("Starting Predictions_{}".format(method))
     cluster = clusters['Cluster']
     cluster_size = len(cluster.keys())
@@ -45,7 +45,7 @@ def forecast_ARIMA(method, clusters, realCrimes, periodsAhead_list, gridshape, i
 
         # if the parameters exist
         params = getIfParametersExists(
-            method, gridshape, c, ignoreFirst, threshold, maxDist)
+            method, gridshape, c, ignoreFirst, threshold, maxDist, modelName)
         if not isRetraining and params:
             print("Loading existing parameters for ...")
             pred_model = sm.tsa.statespace.SARIMAX(endog=df, order=params[0], seasonal_order=params[1],
@@ -79,7 +79,7 @@ def forecast_ARIMA(method, clusters, realCrimes, periodsAhead_list, gridshape, i
                                         max_d=d_max, max_D=D_max, disp=0, max_order=10, maxiter=50)
 
             saveParameters(stepwise_model.order, stepwise_model.seasonal_order,
-                           method, gridshape, c, ignoreFirst, threshold, maxDist)
+                           method, gridshape, c, ignoreFirst, threshold, maxDist, modelName)
 
             if stepwise_model.seasonal_order:
                 pred_model = sm.tsa.statespace.SARIMAX(
